@@ -74,6 +74,7 @@ EXERCISE_DIRS = 01_vector_add/exercises 02_matrix_mul/exercises \
                 06_coalescing/exercises 07_softmax/exercises \
                 08_ncu_profiling/exercises 09_register_tiling/exercises \
                 10_fused_kernel/exercises 11_warp_divergence/exercises \
+                12_layernorm_project/exercises \
                 13_flash_attention/exercises 14_im2col_conv/exercises \
                 15_wmma_gemm/exercises 16_streams/exercises \
                 17_mixed_precision/exercises
