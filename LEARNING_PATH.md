@@ -143,6 +143,7 @@ leanCuda/ → 实际目录名为 learnCuda/
 │   ├── layernorm_cuda.cu ................ PyTorch C++ Binding (含详细注释)
 │   ├── setup.py ......................... PyTorch 扩展编译配置
 │   └── test_layernorm.py ................ 正确性 + 性能测试脚本
+│   └── exercises/ex1_layernorm_level1.cu  单行统计量归约练习
 │
 │ ── 进阶示例 ──
 ├── 13_flash_attention/ .................. ⭐⭐⭐ 简化版 FlashAttention
