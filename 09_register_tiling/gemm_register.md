@@ -318,6 +318,7 @@ Step 4: Tile 内每个元素的全局坐标
 | 练习 | 任务 | 核心考点 |
 |------|------|---------|
 | [ex1_reg_tile_2x2_level1.cu](./exercises/ex1_reg_tile_2x2_level1.cu) | 2×2 Register Tiled GEMM | 简化版 register blocking（只填 kernel） |
+| [ex1_reg_tile_2x2_level2.cu](./exercises/ex1_reg_tile_2x2_level2.cu) | 同上（完整实现） | kernel + host + 计时 + GFLOPS 全部自己写 |
 
 ```bash
 nvcc -O2 -o ex1_reg_tile_2x2_level1 ex1_reg_tile_2x2_level1.cu

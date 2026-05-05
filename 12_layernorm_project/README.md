@@ -634,6 +634,12 @@ nvcc -O2 -o layernorm_starter layernorm_starter.cu
 # 填空完成 kernel，通过正确性检查
 ```
 
+也可以做 exercises 目录下的独立练习：
+
+| 练习 | 任务 | 核心考点 |
+|------|------|---------|
+| [ex1_layernorm_level1.cu](./exercises/ex1_layernorm_level1.cu) | 单行统计量归约 | Warp Shuffle + SMEM 两阶段归约求 mean/rstd（只填 kernel） |
+
 ## 常见错误
 
 - **归约后只用 lane 0 的值，但没有 `if (lane == 0)` 保护** → 症状: mean/variance 完全错误。其他 lane 的 shuffle 结果是中间值，不能直接写入 Shared Memory

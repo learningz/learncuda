@@ -355,6 +355,7 @@ cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_T,
 | 练习 | 任务 | 核心考点 |
 |------|------|---------|
 | [ex1_im2col_level1.cu](./exercises/ex1_im2col_level1.cu) | im2col 展开 kernel | 一维 idx → 五维坐标的反算（只填 kernel） |
+| [ex1_im2col_level2.cu](./exercises/ex1_im2col_level2.cu) | 同上（完整实现） | kernel + host + 验证全部自己写 |
 
 ```bash
 nvcc -O2 -o ex1_im2col_level1 ex1_im2col_level1.cu

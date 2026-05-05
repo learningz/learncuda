@@ -389,7 +389,9 @@ Step 6: Source Counters (需要 -lineinfo 编译) — 定位到代码行
 | 练习 | 任务 | 核心考点 |
 |------|------|---------|
 | [ex1_vectorize_level1.cu](./exercises/ex1_vectorize_level1.cu) | 把标量 kernel 改成 float4 | float4 读写 + reinterpret_cast（只填 kernel） |
+| [ex1_vectorize_level2.cu](./exercises/ex1_vectorize_level2.cu) | 同上（完整实现） | kernel + host + 计时全部自己写 |
 | [ex2_fix_kernel_level1.cu](./exercises/ex2_fix_kernel_level1.cu) | 修复有性能 bug 的 kernel | 分析 stride-2 → 改成合并访问（只填 kernel） |
+| [ex2_fix_kernel_level2.cu](./exercises/ex2_fix_kernel_level2.cu) | 同上（完整实现） | kernel + host + 计时 + 带宽对比全部自己写 |
 
 编译方式（在 `exercises/` 目录下）：
 

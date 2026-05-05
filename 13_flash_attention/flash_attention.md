@@ -322,6 +322,7 @@ FlashAttention:
 | 练习 | 任务 | 核心考点 |
 |------|------|---------|
 | [ex1_block_mm_level1.cu](./exercises/ex1_block_mm_level1.cu) | 分块矩阵乘 (FlashAttn 子问题) | 从零写 tiled matmul（只填 kernel） |
+| [ex1_block_mm_level2.cu](./exercises/ex1_block_mm_level2.cu) | 同上（完整实现） | kernel + host + 计时全部自己写 |
 
 ```bash
 nvcc -O2 -o ex1_block_mm_level1 ex1_block_mm_level1.cu

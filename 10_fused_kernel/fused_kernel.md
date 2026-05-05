@@ -324,6 +324,7 @@ float4 = 16 bytes → LDG.128 要求地址 16B 对齐!
 | 练习 | 任务 | 核心考点 |
 |------|------|---------|
 | [ex1_fused_sigmoid_level1.cu](./exercises/ex1_fused_sigmoid_level1.cu) | Sigmoid + Scale 融合 | 两个 kernel 融合成一个（只填 kernel） |
+| [ex1_fused_sigmoid_level2.cu](./exercises/ex1_fused_sigmoid_level2.cu) | 同上（完整实现） | kernel + host + 计时 + 加速比全部自己写 |
 
 ```bash
 nvcc -O2 -o ex1_fused_sigmoid_level1 ex1_fused_sigmoid_level1.cu

@@ -414,6 +414,7 @@ Ampere m16n8k16 的线程分布 (简化):
 | 练习 | 任务 | 核心考点 |
 |------|------|---------|
 | [ex1_wmma_add_level1.cu](./exercises/ex1_wmma_add_level1.cu) | WMMA 矩阵加法 | fragment load/store 基本用法（只填 kernel） |
+| [ex1_wmma_add_level2.cu](./exercises/ex1_wmma_add_level2.cu) | 同上（完整实现） | kernel + host 全部自己写 |
 
 ```bash
 nvcc -O2 -arch=sm_75 -o ex1_wmma_add_level1 ex1_wmma_add_level1.cu

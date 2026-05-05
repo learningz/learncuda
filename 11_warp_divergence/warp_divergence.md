@@ -295,6 +295,7 @@ output[idx] = (threadIdx.x % 2 == 0) ? path_a : path_b;
 | 练习 | 任务 | 核心考点 |
 |------|------|---------|
 | [ex1_warp_uniform_level1.cu](./exercises/ex1_warp_uniform_level1.cu) | 用 Warp-uniform 条件消除分歧 | 让分支以 Warp 为单位变化（只填 kernel） |
+| [ex1_warp_uniform_level2.cu](./exercises/ex1_warp_uniform_level2.cu) | 同上（完整实现） | kernel + host + 计时全部自己写 |
 
 ```bash
 nvcc -O2 --extended-lambda -o ex1_warp_uniform_level1 ex1_warp_uniform_level1.cu

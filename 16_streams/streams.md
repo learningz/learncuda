@@ -394,6 +394,7 @@ PyTorch DataLoader 优化:
 | 练习 | 任务 | 核心考点 |
 |------|------|---------|
 | [ex1_dual_stream_level1.cu](./exercises/ex1_dual_stream_level1.cu) | 双 Stream 流水线 | 手写 cudaMemcpyAsync + 多 Stream launch（只填 host 端） |
+| [ex1_dual_stream_level2.cu](./exercises/ex1_dual_stream_level2.cu) | 同上（完整实现） | kernel + host + 计时全部自己写 |
 
 ```bash
 nvcc -O2 -o ex1_dual_stream_level1 ex1_dual_stream_level1.cu
