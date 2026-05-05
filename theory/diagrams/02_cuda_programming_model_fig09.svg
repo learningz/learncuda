@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="476" height="707" viewBox="0 0 476 707">
+<defs>
+  <filter id="shadow" x="-4%" y="-4%" width="108%" height="108%">
+    <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#00000055"/>
+  </filter>
+</defs>
+<rect width="100%" height="100%" rx="10" fill="#1e1e2e"/>
+<defs><marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a6adc8"/></marker></defs>
+<text x="32.0" y="40.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">你的 CUDA 代码经历以下编译过程:</text>
+<text x="32.0" y="82.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">.cu 源码</text>
+<text x="32.0" y="103.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">nvcc (前端)</text>
+<text x="32.0" y="124.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">▼</text>
+<text x="32.0" y="145.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">PTX (Parallel Thread Execution) — 虚拟指令集</text>
+<text x="32.0" y="166.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">ptxas (后端)</text>
+<text x="32.0" y="187.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">▼</text>
+<text x="32.0" y="208.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">SASS (Streaming ASSembler) — 真实机器码</text>
+<text x="32.0" y="250.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">PTX 的角色:</text>
+<text x="32.0" y="271.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">- NVIDIA 定义的虚拟 ISA (类似 Java bytecode)</text>
+<text x="32.0" y="292.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">- 和具体 GPU 架构无关</text>
+<text x="32.0" y="313.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">- 可以在运行时被 JIT 编译成 SASS</text>
+<text x="32.0" y="334.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">- 保证向前兼容: 老的 PTX 在新 GPU 上也能跑</text>
+<text x="32.0" y="376.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">SASS 的角色:</text>
+<text x="32.0" y="397.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">- 真正在 GPU 上执行的机器码</text>
+<text x="32.0" y="418.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">- 每代架构不同 (SM_70 和 SM_80 的 SASS 不同)</text>
+<text x="32.0" y="439.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">- 编译时确定具体调度 (stall count, yield, barrier)</text>
+<text x="32.0" y="481.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">查看 PTX:</text>
+<text x="32.0" y="502.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">nvcc -ptx kernel.cu -o kernel.ptx</text>
+<text x="32.0" y="544.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">查看 SASS:</text>
+<text x="32.0" y="565.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">nvcc -cubin kernel.cu -o kernel.cubin</text>
+<text x="32.0" y="586.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">cuobjdump -sass kernel.cubin</text>
+<text x="32.0" y="628.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">或者:</text>
+<text x="32.0" y="649.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">nvcc kernel.cu -o program</text>
+<text x="32.0" y="670.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">cuobjdump -sass program</text>
+</svg>

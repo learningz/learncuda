@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="618" height="917" viewBox="0 0 618 917">
+<defs>
+  <filter id="shadow" x="-4%" y="-4%" width="108%" height="108%">
+    <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#00000055"/>
+  </filter>
+</defs>
+<rect width="100%" height="100%" rx="10" fill="#1e1e2e"/>
+<defs><marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a6adc8"/></marker></defs>
+<text x="32.0" y="40.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">速度快 ↑                                                  容量大 ↓</text>
+<text x="32.0" y="103.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">寄存器 (Register File)</text>
+<text x="32.0" y="124.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">延迟: 0 cycle (流水线内) ~ 1 cycle</text>
+<text x="32.0" y="145.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">带宽: 每 SM ~19.3 TB/s (A100, 理论: 65536 regs × 4B × 1.41GHz)</text>
+<text x="32.0" y="166.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">大小: 每 SM 256KB (65536 × 32-bit), 全 GPU ~27MB</text>
+<text x="32.0" y="187.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">作用域: 每个线程私有</text>
+<text x="32.0" y="208.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">特点: 编译器分配，不可寻址 (不能取指针)</text>
+<text x="32.0" y="250.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">▼</text>
+<text x="32.0" y="271.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">Shared Memory / L1 Cache (统一片上存储)</text>
+<text x="32.0" y="292.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">延迟: ~5 cycles (无 bank conflict)</text>
+<text x="32.0" y="313.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">~5 × N cycles (N-way bank conflict)</text>
+<text x="32.0" y="334.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">带宽: 每 SM ~19 TB/s → 全 GPU ~2 PB/s (108 SMs)</text>
+<text x="32.0" y="355.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">实测有效带宽: 128 Bytes/cycle/SM (A100)</text>
+<text x="32.0" y="376.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">大小: 每 SM 192KB (Ampere), 可配置为 Shared/L1 比例</text>
+<text x="32.0" y="397.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">作用域: Block 内所有线程共享 (Shared Mem) / SM 私有 (L1 Cache)</text>
+<text x="32.0" y="418.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">特点: SRAM, 程序员显式管理 (Shared) 或硬件管理 (L1)</text>
+<text x="32.0" y="460.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">▼</text>
+<text x="32.0" y="481.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">L2 Cache</text>
+<text x="32.0" y="502.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">延迟: ~200 cycles (命中) / ~300+ cycles (部分命中)</text>
+<text x="32.0" y="523.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">带宽: ~5-6 TB/s (A100)</text>
+<text x="32.0" y="544.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">大小: 40MB (A100), 50MB (H100)</text>
+<text x="32.0" y="565.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">作用域: 全 GPU 共享, 所有 SM 都能访问</text>
+<text x="32.0" y="586.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">特点: 分 slice, 靠近不同 memory controller</text>
+<text x="32.0" y="607.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">Ampere+ 支持 L2 Residency Control (锁定数据在 L2)</text>
+<text x="32.0" y="649.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">▼</text>
+<text x="32.0" y="670.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">全局显存 (Global Memory / HBM)</text>
+<text x="32.0" y="691.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">延迟: ~400-800 cycles (取决于队列深度和 bank conflict)</text>
+<text x="32.0" y="712.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">带宽: 2039 GB/s (A100 80GB), 3350 GB/s (H100)</text>
+<text x="32.0" y="733.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">大小: 40-80GB (A100), 80GB (H100)</text>
+<text x="32.0" y="754.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">作用域: 所有线程都能读写, CPU 可通过 PCIe 访问</text>
+<text x="32.0" y="775.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">特点: HBM2e/HBM3, 高带宽但高延迟</text>
+<text x="32.0" y="817.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">▼</text>
+<text x="32.0" y="838.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">系统内存 (CPU RAM, 通过 PCIe/NVLink)</text>
+<text x="32.0" y="859.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">带宽: ~32 GB/s (PCIe 4.0) 或 ~600 GB/s (NVLink)</text>
+<text x="32.0" y="880.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">延迟: ~10,000+ cycles (!!!)</text>
+</svg>

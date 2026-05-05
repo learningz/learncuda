@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="568" height="560" viewBox="0 0 568 560">
+<defs>
+  <filter id="shadow" x="-4%" y="-4%" width="108%" height="108%">
+    <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#00000055"/>
+  </filter>
+</defs>
+<rect width="100%" height="100%" rx="10" fill="#1e1e2e"/>
+<defs><marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a6adc8"/></marker></defs>
+<text x="32.0" y="40.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">编译器分析控制流图 (CFG), 找到每个分支的</text>
+<text x="32.0" y="61.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">&quot;立即后支配节点&quot; (Immediate Post-Dominator, IPDOM):</text>
+<text x="32.0" y="82.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">从分支的两条路径都必须经过的第一个点。</text>
+<text x="32.0" y="124.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">例:</text>
+<text x="32.0" y="145.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">if</text>
+<text x="32.0" y="187.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">then     else</text>
+<text x="32.0" y="229.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">◆   ← IPDOM: 汇合点</text>
+<text x="32.0" y="271.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">next</text>
+<text x="32.0" y="313.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">编译器在 IPDOM 处插入 SSY (Set Synchronization Point) 标记,</text>
+<text x="32.0" y="334.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">硬件的收敛栈 (Convergence Stack) 在该处恢复全量 Active Mask。</text>
+<text x="32.0" y="376.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">问题: 循环中的分支</text>
+<text x="32.0" y="397.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">while (cond) {</text>
+<text x="32.0" y="418.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">if (divergent) { break; }</text>
+<text x="32.0" y="439.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">body();</text>
+<text x="32.0" y="460.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">}</text>
+<text x="32.0" y="481.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">// break 提前退出的线程在 while 之后等待</text>
+<text x="32.0" y="502.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">// 但 while 的 IPDOM 是循环之后 → 即使只有 1 个线程还在循环</text>
+<text x="32.0" y="523.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">// 其他 31 个线程都在等 → 极大浪费</text>
+</svg>

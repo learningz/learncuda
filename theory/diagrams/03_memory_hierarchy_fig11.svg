@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="568" height="602" viewBox="0 0 568 602">
+<defs>
+  <filter id="shadow" x="-4%" y="-4%" width="108%" height="108%">
+    <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#00000055"/>
+  </filter>
+</defs>
+<rect width="100%" height="100%" rx="10" fill="#1e1e2e"/>
+<defs><marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a6adc8"/></marker></defs>
+<rect x="28.0" y="28.0" width="478.8" height="525.0" rx="10" fill="#89b4fa18" stroke="#89b4fa" stroke-width="1.5" opacity="1.0" filter="url(#shadow)"/>
+<text x="40.0" y="44.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">GPU 内存层级速记 (A100)</text>
+<text x="40.0" y="62.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">存储层      延迟         带宽         容量</text>
+<text x="40.0" y="80.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">寄存器      0 cycle     ~数十 TB/s    256KB/SM</text>
+<text x="40.0" y="98.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">Shared Mem  5 cycles    ~19 TB/s     164KB/SM(可配)</text>
+<text x="40.0" y="116.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">L2 Cache    200 cyc     ~5 TB/s      40MB</text>
+<text x="40.0" y="134.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">HBM         500-800 cyc 2039 GB/s    80GB</text>
+<text x="40.0" y="152.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">关键比值:</text>
+<text x="40.0" y="170.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">HBM vs Shared: 延迟 100-160×, 带宽 ~10×</text>
+<text x="40.0" y="188.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">随机 vs 合并访问: 有效带宽可差 10-50×</text>
+<text x="40.0" y="206.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">有 vs 无 Bank Conflict: 最坏 32× 延迟差异</text>
+<text x="40.0" y="224.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">Ridge Point (Memory↔Compute 分界):</text>
+<text x="40.0" y="242.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">FP32: 19.5T / 2039G = 9.6 FLOP/Byte</text>
+<text x="40.0" y="260.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">FP16 TC: 312T / 2039G = 153 FLOP/Byte</text>
+<text x="40.0" y="278.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">优化优先级:</text>
+<text x="40.0" y="296.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">1. 减少访存次数 (融合!)</text>
+<text x="40.0" y="314.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">2. 确保合并访问</text>
+<text x="40.0" y="332.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">3. 向量化 (float4)</text>
+<text x="40.0" y="350.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">4. 用 Shared Memory 缓存</text>
+<text x="40.0" y="368.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">5. 避免 Bank Conflict</text>
+</svg>

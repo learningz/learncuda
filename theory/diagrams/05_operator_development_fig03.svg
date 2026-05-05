@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="652" height="497" viewBox="0 0 652 497">
+<defs>
+  <filter id="shadow" x="-4%" y="-4%" width="108%" height="108%">
+    <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#00000055"/>
+  </filter>
+</defs>
+<rect width="100%" height="100%" rx="10" fill="#1e1e2e"/>
+<defs><marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a6adc8"/></marker></defs>
+<text x="32.0" y="40.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">算子              算术强度 (FLOP/Byte)    A100 理论上限</text>
+<text x="32.0" y="82.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">ReLU              0.125                   255 GB/s 有效带宽 = 理论带宽</text>
+<text x="32.0" y="103.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">Vector Add        0.125                   255 GB/s</text>
+<text x="32.0" y="124.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">GELU              ~1.0                    2039 GB/s (BW limited)</text>
+<text x="32.0" y="145.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">Softmax (N=1024)  ~0.4                    2039 GB/s (BW limited)</text>
+<text x="32.0" y="166.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">LayerNorm         ~0.5                    2039 GB/s (BW limited)</text>
+<text x="32.0" y="187.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">Reduce Sum        0.25                    2039 GB/s (BW limited)</text>
+<text x="32.0" y="208.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">GEMM (N=4096)     ~680                    19.5 TFLOPS (Compute limited)</text>
+<text x="32.0" y="229.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">GEMM (N=128)      ~21                     在 ridge point 附近</text>
+<text x="32.0" y="250.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">Conv 3×3 (C=256)  ~280                    19.5 TFLOPS (Compute limited)</text>
+<text x="32.0" y="271.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">Embedding         ~0                      延迟 limited (随机访问)</text>
+<text x="32.0" y="313.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">对于 Memory Bound 算子:</text>
+<text x="32.0" y="334.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">理论最短时间 = total_bytes / peak_bandwidth</text>
+<text x="32.0" y="355.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">total_bytes = (读字节 + 写字节)</text>
+<text x="32.0" y="376.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">peak_bandwidth = 2039 GB/s (A100) 的 ~85% ≈ 1733 GB/s (实际可达)</text>
+<text x="32.0" y="418.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">对于 Compute Bound 算子:</text>
+<text x="32.0" y="439.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">理论最短时间 = total_flops / peak_flops</text>
+<text x="32.0" y="460.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">peak_flops = 19.5 TFLOPS (FP32) 或 312 TFLOPS (FP16 TC)</text>
+</svg>

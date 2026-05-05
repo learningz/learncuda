@@ -363,3 +363,203 @@ CPU 参考验证:
   向量化 = 减少指令数，让硬件更高效地利用已有的带宽
   两者正交，可以叠加
 ```
+
+
+## 补充答案: Ch4 练习 3
+
+### 练习 3: 手写 __syncthreads 死锁
+
+```
+为什么 Divergent __syncthreads 会死锁?
+
+__syncthreads() 是 Block 级别的屏障: Block 内所有线程必须都到达这个点才能继续。
+
+代码问题:
+  if (threadIdx.x % 2 == 0) {
+      do_work();
+      __syncthreads();   // 只有偶数号到达!
+  } else {
+      do_other_work();
+      __syncthreads();   // 只有奇数号到达!
+  }
+
+死锁原因:
+  线程 0 (偶数): 进 if → do_work() → __syncthreads() → 等待其余 255 个线程
+  线程 1 (奇数):  进 else → do_other_work() → __syncthreads() → 等待其余 255 个线程
+  → 线程 0 永不到达 else 的 __syncthreads(), 线程 1 永不到达 if 的 __syncthreads()
+  → 死锁! GPU 不会超时, 程序永久挂起
+
+正确做法:
+  if (threadIdx.x % 2 == 0) { do_work(); }
+  else { do_other_work(); }
+  __syncthreads();  // 所有线程都会到达 ✓
+```
+
+
+## 补充答案: Ch5 练习 1、2
+
+### 练习 1: GELU 的 Roofline 分析
+
+```
+GELU: y = 0.5*x*(1+tanh(sqrt(2/pi)*(x+0.044715*x^3)))
+  读: 4 bytes, 写: 4 bytes
+  计算: tanh(多项式) + 几次乘加 ≈ 15 FLOP
+  AI = 15 / 8 ≈ 1.9 FLOP/Byte
+
+A100 Ridge Point ≈ 10 FLOP/Byte
+  AI(GELU) = 1.9 << 10 → 深处 Memory Bound
+
+理论最大 = 1.9 × 2000 GB/s = 3800 GFLOPS
+  vs FP32 peak 19500 GFLOPS → 利用率上限 ≈ 19%
+
+优化: 算子融合 + float4 向量化 + FP16/BF16
+不要优化计算! 计算已经远超内存能力
+```
+
+### 练习 2: GELU + Dropout 算子融合
+
+```
+未融合: gelu (读x写tmp) + dropout (读tmp写out)
+  HBM: 4N×4 = 16N bytes
+
+融合: gelu+dropout (读x读mask写out)
+  HBM: 3N×4 = 12N bytes
+  加速比 ≈ 16/12 ≈ 1.3×
+
+融合 kernel:
+  __global__ void gelu_dropout_fused(const float *x, const uint8_t *mask,
+      float *out, float scale, int N) {
+      int i = blockIdx.x * blockDim.x + threadIdx.x;
+      if (i >= N) return;
+      if (mask[i]) {
+          float v = x[i];
+          float cdf = 0.5f*(1+tanhf(0.79788456f*(v+0.044715f*v*v*v)));
+          out[i] = v * cdf * scale;
+      } else out[i] = 0;
+  }
+```
+```
+
+
+## 补充答案: Ch7 练习 2
+
+### 练习 2: Warp-level Softmax 变种 (N=64)
+
+```
+挑战: N=64 > 32, 每线程处理 2 元素
+
+__device__ void warp_softmax_64(float *x, int lane) {
+    float v0 = x[lane], v1 = x[lane + 32];
+
+    // Step 1: 蝴蝶交换找 max (shfl_xor: 所有 lane 都能参与)
+    float m = fmaxf(v0, v1);
+    m = fmaxf(m, __shfl_xor_sync(0xffffffff, m, 16));
+    m = fmaxf(m, __shfl_xor_sync(0xffffffff, m, 8));
+    m = fmaxf(m, __shfl_xor_sync(0xffffffff, m, 4));
+    m = fmaxf(m, __shfl_xor_sync(0xffffffff, m, 2));
+    m = fmaxf(m, __shfl_xor_sync(0xffffffff, m, 1));
+
+    // Step 2: exp sum
+    float s = expf(v0 - m) + expf(v1 - m);
+    s += __shfl_xor_sync(0xffffffff, s, 16);
+    s += __shfl_xor_sync(0xffffffff, s, 8);
+    s += __shfl_xor_sync(0xffffffff, s, 4);
+    s += __shfl_xor_sync(0xffffffff, s, 2);
+    s += __shfl_xor_sync(0xffffffff, s, 1);
+
+    // Step 3: 归一化
+    x[lane] = expf(v0 - m) / s;
+    x[lane + 32] = expf(v1 - m) / s;
+}
+
+扩展: N=128 → 每线程 4 元素 (寄存器限制)
+纯 Shuffle 方案 = 0 次 __syncthreads → 比 Block+Shared Memory 方案更快
+```
+
+## 补充答案: Ch4 练习 3
+
+### 练习 3: 手写 __syncthreads 死锁
+
+__syncthreads() 是 Block 级别的屏障: Block 内所有线程必须都到达这个点才能继续。
+
+代码问题:
+  if (threadIdx.x % 2 == 0) {
+      do_work();
+      __syncthreads();   // 只有偶数号到达!
+  } else {
+      do_other_work();
+      __syncthreads();   // 只有奇数号到达!
+  }
+
+死锁原因:
+  线程 0 (偶数): 进 if -> do_work() -> __syncthreads() -> 等待其余 255 个线程
+  线程 1 (奇数):  进 else -> do_other_work() -> __syncthreads() -> 等待其余 255 个线程
+  -> 线程 0 永不到达 else 的 __syncthreads(), 线程 1 永不到达 if 的 __syncthreads()
+  -> 死锁! 程序永久挂起
+
+正确做法:
+  if (threadIdx.x % 2 == 0) { do_work(); }
+  else { do_other_work(); }
+  __syncthreads();  // 所有线程都会到达
+
+
+## 补充答案: Ch5 练习 1、2
+
+### 练习 1: GELU 的 Roofline 分析
+
+GELU: y = 0.5*x*(1+tanh(sqrt(2/pi)*(x+0.044715*x^3)))
+  读: 4 bytes, 写: 4 bytes, 计算: ~15 FLOP
+  AI = 15 / 8 = 1.9 FLOP/Byte
+
+A100 Ridge Point = 10 FLOP/Byte
+  AI(GELU) = 1.9 << 10 -> Memory Bound
+
+理论最大性能 = 1.9 x 2000 GB/s = 3800 GFLOPS
+  vs FP32 peak 19500 GFLOPS -> 利用率上限 19%
+
+优化: 融合 + float4 + FP16/BF16 (不要优化计算!)
+
+### 练习 2: GELU + Dropout 算子融合
+
+未融合: gelu(读x写tmp) + dropout(读tmp写out) -> HBM: 16N bytes
+融合: gelu+dropout(读x读mask写out) -> HBM: 12N bytes
+加速比: 16/12 = 1.3x
+
+融合 kernel:
+  __global__ void gelu_dropout_fused(const float *x, const uint8_t *mask,
+      float *out, float scale, int N) {
+      int i = blockIdx.x * blockDim.x + threadIdx.x;
+      if (i >= N) return;
+      if (mask[i]) {
+          float v = x[i];
+          float cdf = 0.5f*(1+tanhf(0.79788456f*(v+0.044715f*v*v*v)));
+          out[i] = v * cdf * scale;
+      } else out[i] = 0;
+  }
+
+
+## 补充答案: Ch7 练习 2
+
+### 练习 2: Warp-level Softmax 变种 (N=64)
+
+挑战: N=64 > 32, 每线程处理 2 元素
+
+__device__ void warp_softmax_64(float *x, int lane) {
+    float v0 = x[lane], v1 = x[lane + 32];
+    float m = fmaxf(v0, v1);
+    m = fmaxf(m, __shfl_xor_sync(0xffffffff, m, 16));
+    m = fmaxf(m, __shfl_xor_sync(0xffffffff, m, 8));
+    m = fmaxf(m, __shfl_xor_sync(0xffffffff, m, 4));
+    m = fmaxf(m, __shfl_xor_sync(0xffffffff, m, 2));
+    m = fmaxf(m, __shfl_xor_sync(0xffffffff, m, 1));
+    float s = expf(v0 - m) + expf(v1 - m);
+    s += __shfl_xor_sync(0xffffffff, s, 16);
+    s += __shfl_xor_sync(0xffffffff, s, 8);
+    s += __shfl_xor_sync(0xffffffff, s, 4);
+    s += __shfl_xor_sync(0xffffffff, s, 2);
+    s += __shfl_xor_sync(0xffffffff, s, 1);
+    x[lane] = expf(v0 - m) / s;
+    x[lane + 32] = expf(v1 - m) / s;
+}
+
+扩展: N=128 -> 每线程 4 元素. 纯 Shuffle = 零同步 -> 比 Block+SMEM 更快

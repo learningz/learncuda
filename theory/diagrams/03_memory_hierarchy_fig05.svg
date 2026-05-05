@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="719" height="518" viewBox="0 0 719 518">
+<defs>
+  <filter id="shadow" x="-4%" y="-4%" width="108%" height="108%">
+    <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#00000055"/>
+  </filter>
+</defs>
+<rect width="100%" height="100%" rx="10" fill="#1e1e2e"/>
+<defs><marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a6adc8"/></marker></defs>
+<text x="32.0" y="40.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">Performance            Compute Roof</text>
+<text x="32.0" y="61.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">(FLOP/s)               Peak Compute (19.5 TFLOPS FP32, A100)</text>
+<text x="32.0" y="82.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">╱</text>
+<text x="32.0" y="103.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">╱</text>
+<text x="32.0" y="124.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">╱</text>
+<text x="32.0" y="145.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">╱</text>
+<text x="32.0" y="166.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">╱ ← Memory Bandwidth Roof</text>
+<text x="32.0" y="187.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">╱    (slope = peak bandwidth = 2039 GB/s)</text>
+<text x="32.0" y="208.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">╱</text>
+<text x="32.0" y="229.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">╱</text>
+<text x="32.0" y="250.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">╱</text>
+<text x="32.0" y="271.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">╱</text>
+<text x="32.0" y="292.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">╱</text>
+<text x="32.0" y="313.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">╱</text>
+<text x="32.0" y="334.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">╱</text>
+<text x="32.0" y="355.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">╱</text>
+<text x="32.0" y="376.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">╱</text>
+<text x="32.0" y="397.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">╱</text>
+<text x="32.0" y="418.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">Arithmetic Intensity (FLOP/Byte)</text>
+<text x="32.0" y="460.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">Ridge Point = Peak Compute / Peak BW</text>
+<text x="32.0" y="481.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">A100: 19.5 TFLOPS / 2039 GB/s ≈ 9.6 FLOP/Byte</text>
+</svg>

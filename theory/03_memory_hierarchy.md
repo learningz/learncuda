@@ -90,6 +90,8 @@ L2 Cache
   带宽: ~32 GB/s (PCIe 4.0) 或 ~600 GB/s (NVLink)
   延迟: ~10,000+ cycles (!!!)
 ```
+<p align="center"><img src="diagrams/03_memory_hierarchy_fig01.svg" alt="03_memory_hierarchy figure 1" /></p>
+
 
 **核心事实**：
 - 寄存器 → 全局显存: 延迟差 **400-800×**
@@ -226,6 +228,8 @@ Bank:     B0   B1   B2   B3   B4   B5   B6   B7   ... B31  B0   B1  ...
 32 个 Bank 在同一周期可以并行服务 32 个不同 Bank 的访问
 = 32 × 4B × 时钟频率 = 128 Bytes/cycle
 ```
+<p align="center"><img src="diagrams/03_memory_hierarchy_fig02.svg" alt="03_memory_hierarchy figure 2" /></p>
+
 
 ### Bank Conflict 深度分析
 
@@ -511,6 +515,8 @@ A100 的 L2 Cache: 40MB
 → 均匀分布访问压力
 → 但如果所有 SM 访问同一段地址, 会集中在一个 Slice → 热点
 ```
+<p align="center"><img src="diagrams/03_memory_hierarchy_fig03.svg" alt="03_memory_hierarchy figure 3" /></p>
+
 
 ### L2 Residency Control (Ampere+)
 
@@ -563,6 +569,8 @@ Constant Memory:
 ✗ 每个线程访问不同元素的查找表 (用 __ldg 或 texture 更好)
 ✗ 大于 64KB 的数据
 ```
+<p align="center"><img src="diagrams/03_memory_hierarchy_fig04.svg" alt="03_memory_hierarchy figure 4" /></p>
+
 
 ### Texture Memory — 2D 空间局部性优化
 
@@ -707,20 +715,93 @@ __global__ void kernel(const float *data, int num_tiles) {
 ### Hopper 的 TMA (Tensor Memory Accelerator)
 
 ```
-TMA 是 Hopper 架构引入的硬件单元, 进一步简化多维张量的数据搬运:
+TMA 是 Hopper 架构引入的专用硬件单元, 用于异步张量数据搬运。
+它将 "计算地址 + 发起 load + 处理边界" 全交给硬件, 释放所有线程的计算能力。
 
-传统方式: 每个线程计算自己负责搬运的地址 → 发起 load
-TMA: 只需一个线程发起 TMA 指令, 硬件自动:
-  1. 计算多维张量的地址映射
-  2. 搬运整个 tile 到 Shared Memory
-  3. 处理边界条件 (out-of-bounds → 填充零)
-  4. 支持多播 (Multicast): 同一数据发送到多个 SM
-
-好处:
-- 大幅减少地址计算指令
-- 更高效的带宽利用
-- 天然支持 Thread Block Cluster
+传统方式 (cp.async):  每个线程计算自己的地址 → 32 个线程各发 1 条 cp.async
+TMA 方式:              1 个线程发 1 条指令 → 硬件搬运整个 tile!
 ```
+
+**TMA 解决了什么问题：**
+
+```
+1. 地址计算开销: 传统方式每个线程都要做:
+     row = blockIdx.y * TILE + threadIdx.y
+     col = blockIdx.x * TILE + threadIdx.x
+     addr = base + row * ldm + col
+     if (row < M && col < N) { load } else { zero }
+   → 每线程 5+ 条整数指令, 整个 Warp 32×(5+)
+
+   TMA: 硬件自动做地址计算 + 边界判断 → 0 条地址计算指令!
+
+2. 边界条件处理: TMA 自动处理 out-of-bounds, 自动填充零
+   → 不需要 if (row < M && col < N) 分支 → 消除 Warp Divergence
+
+3. 多播 (Multicast): 同一 tile 同时送到多个 SM 的 Shared Memory
+   → 用于 Thread Block Cluster (多个 Block 共享同一份数据)
+   → HBM 只读 1 次, 但 N 个 Block 都收到! 带宽节省 N 倍!
+```
+
+**TMA 和 cp.async 的架构层级对比：**
+
+```
+cp.async:  SM 的 LD/ST Unit 处理 → 仍占用 LD/ST 指令槽
+TMA:       独立的 TMA Unit (SM 外部!) → 零 LD/ST 指令占用
+           │                              │
+┌── SM ─────────────────────┐ ┌── TMA Unit (独立硬件) ──────┐
+│ Warp Scheduler            │ │ 自动计算多维地址映射          │
+│ → FP32/INT ALU            │ │ 自动处理 stride/boundary     │
+│ → 完全释放做计算!          │ │ 支持 Swizzle/填充模式        │
+│                           │ │ 支持 Multicast (多播)        │
+│ 对应 SASS:                │ │ 对应 SASS:                  │
+│ (无, TMA 不占 SM 资源)     │ │ cp.async.bulk.tensor          │
+└───────────────────────────┘ └─────────────────────────────┘
+```
+
+**基本 CUDA 代码 (Hopper sm_90+)：**
+
+```cuda
+// TMA 需要先创建一个 "描述符" (告诉 TMA 数据布局)
+// 使用 CUTLASS 风格的 TMA 描述符 API:
+#include <cuda/barrier>
+
+__global__ void gemm_tma(float *C, const float *A, const float *B,
+                          int M, int N, int K) {
+    // TMA 描述符 (在 Shared Memory 中)
+    __shared__ alignas(128) cuda::barrier<cuda::thread_scope_block> bar;
+
+    // 使用 cp.async.bulk (TMA 的 CUDA 暴露接口)
+    // 一个线程发起, 搬运整个 128×64 tile:
+    if (threadIdx.x == 0) {
+        // TMA load: A tile [128×64] from Global → Shared Memory
+        asm volatile(
+            "cp.async.bulk.tensor.2d.shared::cluster.global.mbarrier::complete_tx::bytes"
+            :: "r"(smem_addr), "r"(desc_addr), "r"(coord)
+        );
+    }
+
+    // 用 mbarrier 等待 TMA 完成 (不等 __syncthreads, 专门为 TMA 设计)
+    bar.arrive_and_wait();
+
+    // 计算... (TMA 搬运的数据已经在 SMEM 中了)
+}
+
+// 编译:
+// nvcc -arch=sm_90a -o gemm_tma gemm_tma.cu
+```
+
+**TMA vs cp.async 的量化对比 (Hopper H100, GEMM tile load)：**
+
+```
+操作                     地址计算指令    LD/ST指令    占SM资源
+────                     ───────────    ────────    ───────
+cp.async (Ampere)        32×5 = 160     32 条        占用 LD/ST pipeline
+TMA (Hopper)              1×2 = 2        1 条         不占 (独立 TMA Unit)
+```
+
+> **关键认识**: TMA 是 Hopper 架构的最大变化之一。它把数据搬运从 SM 的计算单元中剥离出来，交给独立的硬件引擎。这不仅是 "快一点"——它从根本上改变了 kernel 的资源分配方式。更多的 SM 资源可以用于计算而非数据搬运。
+
+
 
 
 ## 3.8 Roofline 模型 — 完整的性能分析框架
@@ -766,6 +847,8 @@ Performance            Compute Roof
                     Ridge Point = Peak Compute / Peak BW
                     A100: 19.5 TFLOPS / 2039 GB/s ≈ 9.6 FLOP/Byte
 ```
+<p align="center"><img src="diagrams/03_memory_hierarchy_fig05.svg" alt="03_memory_hierarchy figure 5" /></p>
+
 
 ### 计算常见算子的算术强度
 
@@ -837,6 +920,8 @@ Performance
 这就是为什么 Tiling 如此重要:
 把数据切成能放进 Shared Memory 的小块 → 提升有效带宽 10×+
 ```
+<p align="center"><img src="diagrams/03_memory_hierarchy_fig06.svg" alt="03_memory_hierarchy figure 6" /></p>
+
 
 ### 实际测量 vs 理论值
 
@@ -901,6 +986,8 @@ FP16 Tensor Core:
       └── 指令级并行 (ILP) 是否充分?
           → 见第8章高级优化
 ```
+<p align="center"><img src="diagrams/03_memory_hierarchy_fig07.svg" alt="03_memory_hierarchy figure 7" /></p>
+
 
 
 ## 3.10 L1 Data Cache 微架构细节
@@ -936,6 +1023,8 @@ FP16 Tensor Core:
 底层: 配置通过修改 SM 内的 MMU (Memory Management Unit) 的地址映射实现。
 同一个物理 Bank, 根据地址范围判断走 Shared Memory 路径还是 L1 路径。
 ```
+<p align="center"><img src="diagrams/03_memory_hierarchy_fig08.svg" alt="03_memory_hierarchy figure 8" /></p>
+
 
 ### L1 Cache 的访问细节
 
@@ -1027,6 +1116,8 @@ L2 ECC (Error Correcting Code):
   某些 GPU (如消费级 RTX) 可以关闭 ECC → 更高带宽和容量
   数据中心 GPU (A100/H100) 通常强制启用 ECC
 ```
+<p align="center"><img src="diagrams/03_memory_hierarchy_fig09.svg" alt="03_memory_hierarchy figure 9" /></p>
+
 
 
 ## 3.11 全局内存访问的完整硬件路径
@@ -1109,6 +1200,8 @@ L2 ECC (Error Correcting Code):
     等待该寄存器的 Warp 变为 Eligible
     下一个周期 Scheduler 可以选中该 Warp 继续执行
 ```
+<p align="center"><img src="diagrams/03_memory_hierarchy_fig10.svg" alt="03_memory_hierarchy figure 10" /></p>
+
 
 
 ## 3.12 Shared Memory 的 Bank 冲突 — SASS 级分析
@@ -1186,6 +1279,8 @@ ncu 中诊断 Bank Conflict:
 │    5. 避免 Bank Conflict                                │
 └────────────────────────────────────────────────────────┘
 ```
+<p align="center"><img src="diagrams/03_memory_hierarchy_fig11.svg" alt="03_memory_hierarchy figure 11" /></p>
+
 
 
 ## 3.14 本章总结
@@ -1206,7 +1301,7 @@ ncu 中诊断 Bank Conflict:
 ```
 
 
-## 3.14 Q&A
+## 3.15 Q&A
 
 ### Q: “合并访问” 和 “Cache Line” 是什么关系?
 
@@ -1261,7 +1356,7 @@ Volta+: 它们共享同一块物理 SRAM (可配置分割比例)。
 ```
 
 
-## 3.15 练习题
+## 3.16 练习题
 
 配套代码在 [`theory/exercises/`](./exercises/) 目录下: [`ch03_ex1_coalescing.cu`](./exercises/ch03_ex1_coalescing.cu) / [`ch03_ex2_bank.cu`](./exercises/ch03_ex2_bank.cu) / [`ch03_ex3_roofline.cu`](./exercises/ch03_ex3_roofline.cu)
 

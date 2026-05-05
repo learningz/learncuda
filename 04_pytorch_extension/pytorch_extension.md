@@ -60,6 +60,94 @@ Python: output = custom_gelu.forward(input_tensor)
 ```
 
 
+## C++ 封装中的关键调用 — 为什么每次都要写这些
+
+看 `gelu_cuda.cu` 中的 C++ 封装函数，你会发现几个固定套路：
+
+```cpp
+torch::Tensor gelu_forward(torch::Tensor input) {
+    // 套路 1: 输入验证
+    TORCH_CHECK(input.device().is_cuda(), "input must be on CUDA");
+    TORCH_CHECK(input.scalar_type() == torch::kFloat32, "input must be float32");
+    TORCH_CHECK(input.is_contiguous(), "input must be contiguous");
+
+    // 套路 2: 分配输出
+    auto output = torch::empty_like(input);
+
+    // 套路 3: 获取裸指针
+    int n = input.numel();
+    float *in_ptr = input.data_ptr<float>();
+    float *out_ptr = output.data_ptr<float>();
+
+    // 套路 4: launch kernel
+    gelu_forward_kernel<<<grid, block>>>(in_ptr, out_ptr, n);
+
+    return output;
+}
+```
+
+**为什么每个都要检查？**
+
+```
+TORCH_CHECK(input.is_contiguous(), ...):
+  为什么需要? PyTorch 的 tensor 可能不是连续存储的:
+    x = torch.randn(4, 256)        // 连续 ✓
+    y = x.transpose(0, 1)          // y 不连续! 底层是 x 的转置视图
+    z = x[0:2, :]                  // 连续 ✓ (slice 产生连续的视图)
+    w = x[:, ::2]                   // 不连续! 步长是 2
+  
+  如果 tensor 不连续:
+    .data_ptr<float>() 返回的是实际存储的首地址
+    但元素之间的间距不是 sizeof(float), 而是 stride
+    → kernel 里用 input[i] 访问会读到错误的值!
+    → 甚至可能越界 (因为 numel() 和实际存储大小可能不同)
+  
+  修复方法: 调用 .contiguous() 会创建一个连续副本:
+    input = input.contiguous();   // 如果不连续就复制一份, 连续就什么都不做
+  
+  为什么不在函数里自动调?: 因为 .contiguous() 有额外开销 (可能需要 cudaMemcpy 一次)。
+  所以惯例是: 检查 + 报错, 让调用者决定是否 contiguous。
+
+TORCH_CHECK(input.scalar_type() == torch::kFloat32, ...):
+  原因: CUDA kernel 用 float* 指针访问数据。
+  如果 Python 端传了个 half (FP16) tensor → 指针类型不匹配 → 读到垃圾数据。
+  生产代码通常用模板 (template<typename T>) 支持多种精度, 让编译器为每种类型生成不同的 kernel。
+
+TORCH_CHECK(input.device().is_cuda(), ...):
+  原因: CUDA kernel 只能访问 GPU 显存。如果输入还在 CPU 上 → .data_ptr() 返回的是 CPU 指针 → GPU 访问时崩溃。
+  
+为什么调用 data_ptr<float>()?
+  这是获取 tensor 底层 GPU 显存指针的唯一方式。
+  注意: 返回的是 float*, 不是 torch::Tensor。
+  一旦拿到裸指针, 就没有任何 shape/stride/device 信息了 → 前面的 TORCH_CHECK 是最后的安全网。
+```
+
+**完整的安全模板**:
+
+```cpp
+// 生产级的输入处理 (支持任意输入, 自动 contiguous)
+torch::Tensor gelu_forward_safe(torch::Tensor input) {
+    TORCH_CHECK(input.is_cuda(), "CUDA tensor required");
+    
+    // 如果输入不是 contiguous, 自动复制一份
+    if (!input.is_contiguous()) {
+        input = input.contiguous();
+    }
+    
+    // 如果是 FP16 输入, 先转 FP32 (或支持模板生成 FP16 kernel)
+    input = input.to(torch::kFloat32);
+    
+    auto output = torch::empty_like(input);
+    int n = input.numel();
+    
+    // 安全: input 一定是 contiguous float32 CUDA tensor
+    gelu_forward_kernel<<<(n+255)/256, 256>>>(
+        input.data_ptr<float>(), output.data_ptr<float>(), n);
+    
+    return output;
+}
+```
+
 ## autograd.Function — 反向传播怎么接入
 
 ```

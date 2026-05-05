@@ -169,68 +169,110 @@ __global__ void standard_attention(
 }
 
 int main() {
-    int N = 256;  // 序列长度 (教学用, 实际可到 4096+)
-    size_t qkv_bytes = N * D * sizeof(float);
-    size_t l_bytes = N * sizeof(float);
+    // 用多个 N 来展示 FlashAttention 的内存优势随序列长度增长
+    int N_values[] = {256, 512, 1024};
+    int num_tests = sizeof(N_values) / sizeof(N_values[0]);
 
-    printf("简化版 FlashAttention (N=%d, D=%d)\n\n", N, D);
+    printf("简化版 FlashAttention (D=%d) — 性能与内存对比\n\n", D);
 
-    // 初始化
-    float *hQ = (float*)malloc(qkv_bytes);
-    float *hK = (float*)malloc(qkv_bytes);
-    float *hV = (float*)malloc(qkv_bytes);
-    float *hO_std = (float*)malloc(qkv_bytes);
-    float *hO_flash = (float*)malloc(qkv_bytes);
-    srand(42);
-    for (int i = 0; i < N*D; i++) {
-        hQ[i] = (rand() % 200 - 100) / 100.0f;
-        hK[i] = (rand() % 200 - 100) / 100.0f;
-        hV[i] = (rand() % 200 - 100) / 100.0f;
+    for (int t = 0; t < num_tests; t++) {
+        int N = N_values[t];
+        size_t qkv_bytes = N * D * sizeof(float);
+        size_t l_bytes = N * sizeof(float);
+
+        printf("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+        printf("N=%d, D=%d\n", N, D);
+
+        float *hQ = (float*)malloc(qkv_bytes);
+        float *hK = (float*)malloc(qkv_bytes);
+        float *hV = (float*)malloc(qkv_bytes);
+        float *hO_std = (float*)malloc(qkv_bytes);
+        float *hO_flash = (float*)malloc(qkv_bytes);
+        srand(42);
+        for (int i = 0; i < N*D; i++) {
+            hQ[i] = (rand() % 200 - 100) / 100.0f;
+            hK[i] = (rand() % 200 - 100) / 100.0f;
+            hV[i] = (rand() % 200 - 100) / 100.0f;
+        }
+
+        float *dQ, *dK, *dV, *dO, *dL;
+        CUDA_CHECK(cudaMalloc(&dQ, qkv_bytes));
+        CUDA_CHECK(cudaMalloc(&dK, qkv_bytes));
+        CUDA_CHECK(cudaMalloc(&dV, qkv_bytes));
+        CUDA_CHECK(cudaMalloc(&dO, qkv_bytes));
+        CUDA_CHECK(cudaMalloc(&dL, l_bytes));
+        CUDA_CHECK(cudaMemcpy(dQ, hQ, qkv_bytes, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(dK, hK, qkv_bytes, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(dV, hV, qkv_bytes, cudaMemcpyHostToDevice));
+
+        // 标准 Attention — 正确性 + 计时
+        float ms_std = 0;
+        {
+            standard_attention<<<(N+255)/256, 256>>>(dQ, dK, dV, dO, N);
+            CUDA_CHECK(cudaDeviceSynchronize());
+            CUDA_CHECK(cudaMemcpy(hO_std, dO, qkv_bytes, cudaMemcpyDeviceToHost));
+
+            cudaEvent_t t0, t1;
+            CUDA_CHECK(cudaEventCreate(&t0)); CUDA_CHECK(cudaEventCreate(&t1));
+            CUDA_CHECK(cudaEventRecord(t0));
+            int iters = (N <= 512) ? 100 : 20;
+            for (int r = 0; r < iters; r++)
+                standard_attention<<<(N+255)/256, 256>>>(dQ, dK, dV, dO, N);
+            CUDA_CHECK(cudaEventRecord(t1));
+            CUDA_CHECK(cudaEventSynchronize(t1));
+            CUDA_CHECK(cudaEventElapsedTime(&ms_std, t0, t1));
+            ms_std /= iters;
+            CUDA_CHECK(cudaEventDestroy(t0)); CUDA_CHECK(cudaEventDestroy(t1));
+        }
+
+        // Flash Attention — 正确性 + 计时
+        float ms_flash = 0;
+        {
+            flash_attention_forward<<<(N+Br-1)/Br, Br>>>(dQ, dK, dV, dO, dL, N);
+            CUDA_CHECK(cudaDeviceSynchronize());
+            CUDA_CHECK(cudaMemcpy(hO_flash, dO, qkv_bytes, cudaMemcpyDeviceToHost));
+
+            cudaEvent_t t0, t1;
+            CUDA_CHECK(cudaEventCreate(&t0)); CUDA_CHECK(cudaEventCreate(&t1));
+            CUDA_CHECK(cudaEventRecord(t0));
+            int iters = (N <= 512) ? 200 : 50;
+            for (int r = 0; r < iters; r++)
+                flash_attention_forward<<<(N+Br-1)/Br, Br>>>(dQ, dK, dV, dO, dL, N);
+            CUDA_CHECK(cudaEventRecord(t1));
+            CUDA_CHECK(cudaEventSynchronize(t1));
+            CUDA_CHECK(cudaEventElapsedTime(&ms_flash, t0, t1));
+            ms_flash /= iters;
+            CUDA_CHECK(cudaEventDestroy(t0)); CUDA_CHECK(cudaEventDestroy(t1));
+        }
+
+        // 验证
+        float max_err = 0;
+        for (int i = 0; i < N * D; i++)
+            max_err = fmaxf(max_err, fabsf(hO_std[i] - hO_flash[i]));
+
+        // 内存
+        float mem_std_mb = (float)N * N * sizeof(float) / 1e6;
+        float mem_flash_kb = (float)N * sizeof(float) / 1e3;
+
+        printf("  正确性:   max|std - flash| = %.2e  %s\n",
+               max_err, max_err < 1e-4 ? "✓" : "✗");
+        printf("  耗时:     标准=%.4f ms,  Flash=%.4f ms,  加速比=%.2f×\n",
+               ms_std, ms_flash, ms_std / ms_flash);
+        printf("  内存:     标准 S/P 矩阵 = %.1f MB,  Flash O(1) 状态 = %.1f KB\n",
+               mem_std_mb, mem_flash_kb);
+        printf("  内存节省: %.0f×\n", (float)N * N * 4 / (N * 4));
+        printf("\n");
+
+        CUDA_CHECK(cudaFree(dQ)); CUDA_CHECK(cudaFree(dK));
+        CUDA_CHECK(cudaFree(dV)); CUDA_CHECK(cudaFree(dO)); CUDA_CHECK(cudaFree(dL));
+        free(hQ); free(hK); free(hV); free(hO_std); free(hO_flash);
     }
 
-    float *dQ, *dK, *dV, *dO, *dL;
-    CUDA_CHECK(cudaMalloc(&dQ, qkv_bytes));
-    CUDA_CHECK(cudaMalloc(&dK, qkv_bytes));
-    CUDA_CHECK(cudaMalloc(&dV, qkv_bytes));
-    CUDA_CHECK(cudaMalloc(&dO, qkv_bytes));
-    CUDA_CHECK(cudaMalloc(&dL, l_bytes));
-    CUDA_CHECK(cudaMemcpy(dQ, hQ, qkv_bytes, cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(dK, hK, qkv_bytes, cudaMemcpyHostToDevice));
-    CUDA_CHECK(cudaMemcpy(dV, hV, qkv_bytes, cudaMemcpyHostToDevice));
+    printf("核心发现:\n");
+    printf("  1. FlashAttention 永远不构建 N×N 的 S 矩阵 → O(N) 内存\n");
+    printf("  2. N=1024 时标准 Attention 需要 4MB S/P, N=8192 时需要 256MB!\n");
+    printf("  3. FlashAttention 内存与 N 线性增长, 可以处理长序列\n");
+    printf("  4. Online Softmax 修正因子: exp(old_max - new_max) 同时修正 sum 和 O\n");
 
-    // 标准 Attention
-    standard_attention<<<(N+255)/256, 256>>>(dQ, dK, dV, dO, N);
-    CUDA_CHECK(cudaMemcpy(hO_std, dO, qkv_bytes, cudaMemcpyDeviceToHost));
-
-    // Flash Attention
-    flash_attention_forward<<<(N+Br-1)/Br, Br>>>(dQ, dK, dV, dO, dL, N);
-    CUDA_CHECK(cudaMemcpy(hO_flash, dO, qkv_bytes, cudaMemcpyDeviceToHost));
-
-    // 验证
-    float max_err = 0;
-    for (int i = 0; i < N * D; i++) {
-        max_err = fmaxf(max_err, fabsf(hO_std[i] - hO_flash[i]));
-    }
-    printf("标准 vs Flash 最大误差: %.2e %s\n", max_err, max_err < 1e-4 ? "✓" : "✗");
-
-    printf("\n内存使用对比:\n");
-    printf("  标准 Attention: 需要 N×N = %d×%d = %.1f MB 的 S/P 矩阵\n",
-           N, N, (float)N*N*4/1e6);
-    printf("  Flash Attention: 只需要 N = %d 个 logsumexp = %.1f KB\n",
-           N, (float)N*4/1e3);
-    printf("  内存节省: %.0f×\n", (float)N*N*4 / (N*4));
-
-    printf("\n核心算法 (逐行注释见代码):\n");
-    printf("  1. 加载 Q 的一行到寄存器 (只读 1 次)\n");
-    printf("  2. 循环遍历 K/V 的每一块:\n");
-    printf("     a. 计算 S = Q_row · K_block^T / √d (在寄存器中)\n");
-    printf("     b. Online Softmax 更新 max 和 sum\n");
-    printf("     c. 修正之前的 O: O *= exp(m_old - m_new)  ← 关键!\n");
-    printf("     d. 累加: O += exp(s - m_new) × V_block\n");
-    printf("  3. 最终归一化: O /= sum\n");
-    printf("\n  S 矩阵从未完整构建! 只有 Bc 个分数在寄存器中存活。\n");
-
-    cudaFree(dQ); cudaFree(dK); cudaFree(dV); cudaFree(dO); cudaFree(dL);
-    free(hQ); free(hK); free(hV); free(hO_std); free(hO_flash);
     return 0;
 }

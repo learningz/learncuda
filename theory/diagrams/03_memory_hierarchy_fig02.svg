@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="652" height="497" viewBox="0 0 652 497">
+<defs>
+  <filter id="shadow" x="-4%" y="-4%" width="108%" height="108%">
+    <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#00000055"/>
+  </filter>
+</defs>
+<rect width="100%" height="100%" rx="10" fill="#1e1e2e"/>
+<defs><marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a6adc8"/></marker></defs>
+<rect x="28.0" y="238.0" width="58.8" height="147.0" rx="10" fill="#89b4fa18" stroke="#89b4fa" stroke-width="1.5" opacity="1.0" filter="url(#shadow)"/>
+<text x="40.0" y="254.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">Bank 0</text>
+<text x="40.0" y="272.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">addr</text>
+<text x="40.0" y="290.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">0</text>
+<text x="40.0" y="308.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">128</text>
+<text x="40.0" y="326.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">256</text>
+<text x="40.0" y="344.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">...</text>
+<rect x="103.6" y="238.0" width="58.8" height="147.0" rx="10" fill="#89b4fa18" stroke="#89b4fa" stroke-width="1.5" opacity="1.0" filter="url(#shadow)"/>
+<text x="115.6" y="254.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">Bank 1</text>
+<text x="115.6" y="272.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">addr</text>
+<text x="115.6" y="290.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">4</text>
+<text x="115.6" y="308.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">132</text>
+<text x="115.6" y="326.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">260</text>
+<text x="115.6" y="344.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">...</text>
+<rect x="179.2" y="238.0" width="58.8" height="147.0" rx="10" fill="#89b4fa18" stroke="#89b4fa" stroke-width="1.5" opacity="1.0" filter="url(#shadow)"/>
+<text x="191.2" y="254.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">Bank 2</text>
+<text x="191.2" y="272.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">addr</text>
+<text x="191.2" y="290.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">8</text>
+<text x="191.2" y="308.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">136</text>
+<text x="191.2" y="326.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">264</text>
+<text x="191.2" y="344.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">...</text>
+<rect x="288.4" y="238.0" width="58.8" height="147.0" rx="10" fill="#89b4fa18" stroke="#89b4fa" stroke-width="1.5" opacity="1.0" filter="url(#shadow)"/>
+<text x="300.4" y="254.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">Bank31</text>
+<text x="300.4" y="272.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">addr</text>
+<text x="300.4" y="290.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">124</text>
+<text x="300.4" y="308.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">252</text>
+<text x="300.4" y="326.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">380</text>
+<text x="300.4" y="344.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">...</text>
+<text x="32.0" y="40.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">Shared Memory 由 32 个独立的 SRAM Bank 组成。</text>
+<text x="32.0" y="61.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">每个 Bank 宽度 32 bit (4 字节), 每周期可以服务一个读或一个写。</text>
+<text x="32.0" y="103.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">物理布局 (连续 4 字节映射到连续 Bank):</text>
+<text x="32.0" y="124.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">Address:  0    4    8    12   16   20   24   28   ... 124  128  132 ...</text>
+<text x="32.0" y="145.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">Bank:     B0   B1   B2   B3   B4   B5   B6   B7   ... B31  B0   B1  ...</text>
+<text x="32.0" y="187.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">可以理解为: Bank 编号 = (地址 / 4) % 32</text>
+<text x="32.0" y="229.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">每个 Bank 是一个小的 SRAM 模块:</text>
+<text x="32.0" y="439.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">32 个 Bank 在同一周期可以并行服务 32 个不同 Bank 的访问</text>
+<text x="32.0" y="460.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">= 32 × 4B × 时钟频率 = 128 Bytes/cycle</text>
+</svg>

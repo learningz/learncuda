@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="627" height="1085" viewBox="0 0 627 1085">
+<defs>
+  <filter id="shadow" x="-4%" y="-4%" width="108%" height="108%">
+    <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#00000055"/>
+  </filter>
+</defs>
+<rect width="100%" height="100%" rx="10" fill="#1e1e2e"/>
+<defs><marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a6adc8"/></marker></defs>
+<rect x="53.2" y="238.0" width="100.8" height="42.0" rx="10" fill="#89b4fa18" stroke="#89b4fa" stroke-width="1.5" opacity="1.0" filter="url(#shadow)"/>
+<text x="65.2" y="254.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">N+   N+</text>
+<text x="32.0" y="40.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">晶体管是一个电控开关。给一个端子 (Gate) 加电压，控制另外两个端子</text>
+<text x="32.0" y="61.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">(Source, Drain) 之间是否导通。</text>
+<text x="32.0" y="103.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">MOSFET (Metal-Oxide-Semiconductor Field-Effect Transistor):</text>
+<text x="32.0" y="124.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">现代芯片中几乎所有晶体管都是 MOSFET。</text>
+<text x="32.0" y="166.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">结构 (NMOS, N-type MOSFET):</text>
+<text x="32.0" y="187.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">Gate (栅极)</text>
+<text x="32.0" y="229.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6e3a1;font-weight:600;opacity:1.0">← Gate Oxide (SiO2 绝缘层, 厚度 ~1-2nm)</text>
+<text x="32.0" y="334.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">Source   Drain</text>
+<text x="32.0" y="355.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">(源极)  (漏极)</text>
+<text x="32.0" y="397.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">工作原理:</text>
+<text x="32.0" y="418.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">Gate 电压 = 0V → Source-Drain 之间不导通 → 开关断开 (OFF)</text>
+<text x="32.0" y="439.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">Gate 电压 = Vdd → 形成导电沟道 → Source-Drain 导通 → 开关闭合 (ON)</text>
+<text x="32.0" y="481.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">Vdd (供电电压):</text>
+<text x="32.0" y="502.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">早期 (90nm): ~1.2V</text>
+<text x="32.0" y="523.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">现代 (7nm):  ~0.7V</text>
+<text x="32.0" y="544.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">更低电压 = 更低功耗, 但也更容易受噪声干扰</text>
+<text x="32.0" y="586.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">FinFET (鳍式场效应管):</text>
+<text x="32.0" y="607.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">从 22nm 开始, 传统平面 MOSFET 控制不住漏电流。</text>
+<text x="32.0" y="628.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">FinFET 将沟道做成立体的&quot;鳍&quot;(Fin), Gate 从三面包裹沟道:</text>
+<text x="32.0" y="670.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">传统 MOSFET:          FinFET:</text>
+<text x="32.0" y="691.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">Gate 从上方覆盖        Gate 从三面包裹</text>
+<text x="32.0" y="733.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6e3a1;font-weight:600;opacity:1.0">← &quot;鳍&quot;</text>
+<text x="32.0" y="754.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">[沟道 ]</text>
+<text x="32.0" y="838.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6e3a1;font-weight:600;opacity:1.0">→ 更好的栅控能力 → 更低漏电 → 可以做更小</text>
+<text x="32.0" y="880.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">GAA (Gate-All-Around):</text>
+<text x="32.0" y="901.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">3nm 及以下开始采用。Gate 从四面完全包裹沟道 (Nanosheet)。</text>
+<text x="32.0" y="922.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">更极致的栅控 → 更低漏电 → 可以继续缩小。</text>
+<text x="32.0" y="964.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">为什么这些对 GPU 重要?</text>
+<text x="32.0" y="985.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">A100: 542 亿晶体管, TSMC 7nm FinFET</text>
+<text x="32.0" y="1006.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">H100: 800 亿晶体管, TSMC 4nm FinFET</text>
+<text x="32.0" y="1027.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">晶体管越多 → 可以放更多计算单元/寄存器/缓存</text>
+<text x="32.0" y="1048.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">工艺越先进 → 同样面积塞更多晶体管, 且更低功耗</text>
+</svg>

@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="669" height="1484" viewBox="0 0 669 1484">
+<defs>
+  <filter id="shadow" x="-4%" y="-4%" width="108%" height="108%">
+    <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#00000055"/>
+  </filter>
+</defs>
+<rect width="100%" height="100%" rx="10" fill="#1e1e2e"/>
+<defs><marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a6adc8"/></marker></defs>
+<rect x="44.8" y="70.0" width="184.8" height="252.0" rx="10" fill="#89b4fa18" stroke="#89b4fa" stroke-width="1.5" opacity="1.0" filter="url(#shadow)"/>
+<text x="56.8" y="86.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">VDD</text>
+<text x="56.8" y="104.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">PMOS   PMOS</text>
+<text x="56.8" y="122.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">NMOS   NMOS</text>
+<text x="56.8" y="140.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">GND</text>
+<text x="56.8" y="158.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">+ 2个 Access 晶体管</text>
+<rect x="44.8" y="574.0" width="100.8" height="210.0" rx="10" fill="#89b4fa18" stroke="#89b4fa" stroke-width="1.5" opacity="1.0" filter="url(#shadow)"/>
+<text x="56.8" y="590.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">Bit Line</text>
+<text x="56.8" y="608.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">NMOS</text>
+<text x="56.8" y="626.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">┌┴┐</text>
+<text x="56.8" y="644.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">Cap</text>
+<text x="56.8" y="662.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">└┬┘</text>
+<text x="56.8" y="680.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">GND</text>
+<text x="32.0" y="40.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">SRAM (Static RAM):</text>
+<text x="32.0" y="61.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">每个 bit 用 6 个晶体管 (6T SRAM cell):</text>
+<text x="32.0" y="376.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">特点:</text>
+<text x="32.0" y="397.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">- 不需要刷新, 只要供电就保持数据</text>
+<text x="32.0" y="418.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">- 读写速度快 (亚纳秒级)</text>
+<text x="32.0" y="439.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">- 面积大 (6T → 每 bit 很占面积)</text>
+<text x="32.0" y="460.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">- 功耗: 静态漏电 + 读写功耗</text>
+<text x="32.0" y="502.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">用于: Register File, L1/L2 Cache, Shared Memory</text>
+<text x="32.0" y="544.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">DRAM (Dynamic RAM):</text>
+<text x="32.0" y="565.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">每个 bit 只用 1 个晶体管 + 1 个电容:</text>
+<text x="32.0" y="838.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">特点:</text>
+<text x="32.0" y="859.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">- 电容会漏电 → 必须定期刷新 (Refresh, 每 ~64ms)</text>
+<text x="32.0" y="880.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">- 读是破坏性的 (读出电荷后需要写回)</text>
+<text x="32.0" y="901.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">- 面积小 (1T1C → 每 bit 面积是 SRAM 的 1/4-1/6)</text>
+<text x="32.0" y="922.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">- 读写慢 (~数十 ns), 但带宽可以做高 (宽总线)</text>
+<text x="32.0" y="964.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">用于: GPU 显存 (HBM), CPU 主存 (DDR)</text>
+<text x="32.0" y="1006.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">DRAM 的内部组织:</text>
+<text x="32.0" y="1027.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">Bank → Row → Column</text>
+<text x="32.0" y="1069.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">DRAM Bank</text>
+<text x="32.0" y="1111.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">Row 0: [col0][col1]...[colN] ← 一行 ~1KB-2KB</text>
+<text x="32.0" y="1132.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">Row 1: [col0][col1]...[colN]</text>
+<text x="32.0" y="1153.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">...</text>
+<text x="32.0" y="1174.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">Row M: [col0][col1]...[colN] ← 通常 ~32K-64K 行</text>
+<text x="32.0" y="1216.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">Row Buffer (Sense Amplifier) ← 当前打开的行的缓存</text>
+<text x="32.0" y="1237.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">[col0][col1]...[colN]          读写都在 Row Buffer 上操作</text>
+<text x="32.0" y="1300.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">访问过程:</text>
+<text x="32.0" y="1321.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">1. ACTIVATE: 打开一行 (将 Row 的数据读入 Row Buffer) ~13ns (tRCD)</text>
+<text x="32.0" y="1342.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">2. READ/WRITE: 从 Row Buffer 读/写特定列 ~13ns (CL)</text>
+<text x="32.0" y="1363.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">3. PRECHARGE: 关闭当前行 (准备打开下一行) ~13ns (tRP)</text>
+<text x="32.0" y="1405.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">如果连续访问同一行 (Row Buffer Hit): 只需 READ ~13ns</text>
+<text x="32.0" y="1426.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">如果访问不同行 (Row Buffer Conflict): PRECHARGE + ACTIVATE + READ ~40ns</text>
+<text x="32.0" y="1447.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6e3a1;font-weight:600;opacity:1.0">→ 这就是 &quot;Row Conflict&quot; 延迟的来源</text>
+</svg>

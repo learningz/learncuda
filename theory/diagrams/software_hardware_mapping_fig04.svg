@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="610" height="938" viewBox="0 0 610 938">
+<defs>
+  <filter id="shadow" x="-4%" y="-4%" width="108%" height="108%">
+    <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#00000055"/>
+  </filter>
+</defs>
+<rect width="100%" height="100%" rx="10" fill="#1e1e2e"/>
+<defs><marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a6adc8"/></marker></defs>
+<rect x="44.8" y="448.0" width="512.4" height="147.0" rx="10" fill="#89b4fa18" stroke="#89b4fa" stroke-width="1.5" opacity="1.0" filter="url(#shadow)"/>
+<text x="56.8" y="464.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">threadIdx.x (0-15)</text>
+<text x="56.8" y="482.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">threadIdx.y   0    1    2    3    4    5    ...  15</text>
+<text x="56.8" y="500.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">0       (0,0)(1,0)(2,0)(3,0)(4,0)(5,0)    (15,0)</text>
+<text x="56.8" y="518.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">1       (0,1)(1,1)(2,1)(3,1)...</text>
+<text x="56.8" y="536.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">...</text>
+<text x="56.8" y="554.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">15      (0,15)(1,15)...              (15,15)</text>
+<text x="32.0" y="40.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">这是程序员直接控制的层面。</text>
+<text x="32.0" y="82.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">向量加法:</text>
+<text x="32.0" y="103.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">int i = blockIdx.x * blockDim.x + threadIdx.x;</text>
+<text x="32.0" y="124.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">c[i] = a[i] + b[i];</text>
+<text x="32.0" y="166.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">Thread 0 of Block 0: i = 0×256 + 0 = 0      → a[0] + b[0]</text>
+<text x="32.0" y="187.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">Thread 1 of Block 0: i = 0×256 + 1 = 1      → a[1] + b[1]</text>
+<text x="32.0" y="208.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">...</text>
+<text x="32.0" y="229.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">Thread 0 of Block 1: i = 1×256 + 0 = 256    → a[256] + b[256]</text>
+<text x="32.0" y="271.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">合并访问分析:</text>
+<text x="32.0" y="292.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">同一 Warp (Thread 0-31 of Block 0):</text>
+<text x="32.0" y="313.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">地址: a+0, a+4, a+8, ..., a+124 → 连续! → 1 次 128B 事务 ✓</text>
+<text x="32.0" y="355.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">矩阵乘法 (2D Block):</text>
+<text x="32.0" y="376.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">int row = blockIdx.y * blockDim.y + threadIdx.y;</text>
+<text x="32.0" y="397.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">int col = blockIdx.x * blockDim.x + threadIdx.x;</text>
+<text x="32.0" y="439.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">Block (0,0) 的线程布局 (blockDim = 16×16):</text>
+<text x="32.0" y="649.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">Warp 的映射 (线性 ID = threadIdx.x + threadIdx.y × blockDim.x):</text>
+<text x="32.0" y="670.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">Warp 0: 线性 ID 0-31</text>
+<text x="32.0" y="691.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6e3a1;font-weight:600;opacity:1.0">→ (0,0)(1,0)(2,0)...(15,0)(0,1)(1,1)...(15,1)</text>
+<text x="32.0" y="712.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6e3a1;font-weight:600;opacity:1.0">→ threadIdx.x 在 0-15 循环, threadIdx.y = 0 和 1</text>
+<text x="32.0" y="754.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">这 32 个线程读 B[k][col]:</text>
+<text x="32.0" y="775.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">col = blockIdx.x * 16 + threadIdx.x</text>
+<text x="32.0" y="796.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6e3a1;font-weight:600;opacity:1.0">→ threadIdx.x = 0,1,...15,0,1,...15 → col 连续!</text>
+<text x="32.0" y="817.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6e3a1;font-weight:600;opacity:1.0">→ B 的地址连续 → 合并访问 ✓</text>
+<text x="32.0" y="859.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">如果反过来 (threadIdx.x 对应行, threadIdx.y 对应列):</text>
+<text x="32.0" y="880.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">同一 Warp 的 threadIdx.x 连续 → row 连续 → B[k][row] 不连续!</text>
+<text x="32.0" y="901.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6e3a1;font-weight:600;opacity:1.0">→ 不合并 ✗ → 这就是为什么 x 必须对应列方向!</text>
+</svg>

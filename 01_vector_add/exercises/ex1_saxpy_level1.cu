@@ -38,10 +38,7 @@
 // ============================================================
 __global__ void saxpy_kernel(float a, const float *x, float *y, int n) {
     // --- 在这里写你的代码 ---
-    int tid = blockDim.x * blockIdx.x + threadIdx.x;
-    if (tid < n) {
-        y[tid] = a * x[tid] + y[tid];
-    }
+
 }
 
 int main() {

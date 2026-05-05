@@ -92,6 +92,8 @@ Volta+ (独立线程调度):
     - Warp 内的互斥锁 (需要 __syncwarp 配合)
     - 不同线程执行不同的循环迭代次数
 ```
+<p align="center"><img src="diagrams/04_warp_and_sync_fig01.svg" alt="04_warp_and_sync figure 1" /></p>
+
 
 ### 分支分歧的精确性能模型
 
@@ -562,6 +564,111 @@ float excl   = cg::exclusive_scan(warp, val, cg::plus<float>());
 // 比手写 shuffle 更简洁, 且编译器可以进一步优化
 ```
 
+### Cooperative Groups 实战 — 用 cg::reduce 改写 Warp 归约
+
+对比传统写法和 CG 写法，差异一目了然：
+
+```cuda
+// ===== 传统写法: 手写 Warp Shuffle Reduce =====
+__device__ float warp_reduce_sum_manual(float val) {
+    #pragma unroll
+    for (int offset = 16; offset > 0; offset /= 2)
+        val += __shfl_down_sync(0xffffffff, val, offset);
+    return val;
+}
+
+// ===== CG 写法: 一行搞定! =====
+__device__ float warp_reduce_sum_cg(float val) {
+    cg::thread_block_tile<32> warp = cg::tiled_partition<32>(cg::this_thread_block());
+    return cg::reduce(warp, val, cg::plus<float>());
+}
+
+// CG 版本的优势:
+//   1. 不需要手动管理 mask (0xffffffff 写错一位就全错)
+//   2. 不需要手动 unroll (编译器根据架构自动选最优展开)
+//   3. 不需要 tracking offset (offset 先后搞错 → 结果不正确)
+//   4. 可移植: 不同 GPU 架构的 shuffle 拓扑不同，CG 帮你适配
+```
+
+**完整的 Block 内 2 层归约 (CG 版)**：
+
+```cuda
+#include <cooperative_groups.h>
+namespace cg = cooperative_groups;
+
+__global__ void reduce_cg(const float *input, float *output, int n) {
+    // Step 1: 每个线程的局部累加
+    float sum = 0.0f;
+    for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < n; i += gridDim.x * blockDim.x)
+        sum += input[i];
+
+    // Step 2: Block 内归约
+    cg::thread_block block = cg::this_thread_block();
+    __shared__ float smem[32];  // 只需 stores 32 个 warp 结果
+
+    // 先 Warp 内归约 (用 CG 的 reduce!)
+    cg::thread_block_tile<32> warp = cg::tiled_partition<32>(block);
+    float warp_sum = cg::reduce(warp, sum, cg::plus<float>());
+
+    // Warp 0 写入 SMEM
+    if (warp.meta_group_rank() == 0)  // 组 0 = 第一个 Warp
+        smem[warp.thread_rank()] = warp_sum;
+
+    block.sync();  // == __syncthreads()
+
+    // Warp 0 从 SMEM 读取并最终归约
+    if (warp.meta_group_rank() == 0) {
+        float smem_val = smem[warp.thread_rank()];
+        float block_sum = cg::reduce(warp, smem_val, cg::plus<float>());
+        if (warp.thread_rank() == 0)
+            output[blockIdx.x] = block_sum;
+    }
+}
+```
+
+> **重点**: `cg::reduce` 替换了手写 shuffle 循环 → 代码量减半，可读性翻倍，性能不减。
+
+**Grid 级同步 (Grid Group) 的完整示例：**
+
+```cuda
+// 需要 Cooperative Launch!
+__global__ void grid_sync_kernel(float *data, int n) {
+    cg::grid_group grid = cg::this_grid();
+    cg::thread_block block = cg::this_thread_block();
+
+    // Phase 1: 所有 Block 各自做本地计算
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < n) data[idx] = process(data[idx]);
+
+    grid.sync();  // ← 所有 Block 在这里等待!
+    // 此时所有 Block 的 Phase 1 都已完成 → 可以安全读其他 Block 的输出
+
+    // Phase 2: 跨 Block 读取
+    // (实际场景中这里可以读 global memory 中其他 Block 写的数据)
+}
+
+// CPU 端启动 (和普通 <<<>>> 不同!)
+int main() {
+    // 检查硬件是否支持 grid sync
+    int numBlocksPerSm = 0;
+    cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+        &numBlocksPerSm, grid_sync_kernel, blockSize, 0);
+
+    int dev;
+    cudaDeviceGetAttribute(&dev, cudaDevAttrMultiProcessorCount, 0);
+    int maxBlocks = numBlocksPerSm * dev;
+
+    // 用 Cooperative Launch 启动
+    void *args[] = {&d_data, &N};
+    dim3 grid(maxBlocks);
+    dim3 block(blockSize);
+    cudaLaunchCooperativeKernel(
+        (void*)grid_sync_kernel, grid, block, args, 0, 0);
+}
+```
+
+> **Cooperative Launch 的约束**: Grid 的总 Block 数不能超过设备可同时驻留的最大数量（否则永远等不到所有 Block → 死锁）。这意味着实际能用的 Block 数通常只有几千个而不是几万个。
+
 
 ## 4.4 原子操作 — 从硬件到无锁算法
 
@@ -765,6 +872,8 @@ Ampere: 同样 256 寄存器粒度
   - 但 Tensor Core 的计算密度足够高, 不需要很多 Warp 来隐藏延迟
   → 低 Occupancy 但是 85%+ 的硬件效率!
 ```
+<p align="center"><img src="diagrams/04_warp_and_sync_fig02.svg" alt="04_warp_and_sync figure 2" /></p>
+
 
 ### 动态调整 Occupancy 的技术
 
@@ -915,6 +1024,8 @@ while (shared_flag == 0);
   // 但 while 的 IPDOM 是循环之后 → 即使只有 1 个线程还在循环
   // 其他 31 个线程都在等 → 极大浪费
 ```
+<p align="center"><img src="diagrams/04_warp_and_sync_fig03.svg" alt="04_warp_and_sync figure 3" /></p>
+
 
 ### Volta+: 基于调度器的动态汇合
 

@@ -559,6 +559,43 @@ PCIe:               ←──── H2D 传输 ────→                  
 ```
 
 
+## GPU 越界访问 — 为什么不报错而是静默损坏数据
+
+```
+在 CPU 上, 数组越界 = segfault (操作系统检测到访问了未映射的页)
+
+在 GPU 上, 数组越界 ≠ 立即崩溃!
+  GPU 没有操作系统来检测非法访问。
+  越界写入的后果:
+    1. 写到同一个 cudaMalloc 分配的块内 → 数据被悄无声息地破坏
+       → 后续 kernel 读到错误数据 → 结果莫名其妙地不对
+    2. 写到未分配区域 → 取决于 GPU 页表:
+       a) 页表有映射 → 写到别人的显存 → 影响其他 tensor/kernel
+       b) 页表无映射 → 写入被静默丢弃 (写黑洞)
+    3. 越界读取 → 读到未初始化的显存数据 (垃圾值)
+
+为什么特别危险?
+  GPU 是异步的 → 写越界发生时, CPU 可能已经执行到很远的地方
+  → cudaDeviceSynchronize() 也不会报错!
+  → 只有 cuda-memcheck / compute-sanitizer 能检测
+
+如何检测:
+  compute-sanitizer --tool memcheck ./your_program
+
+  compute-sanitizer 会:
+    - 在每次全局内存访问前后插入检查
+    - 检测越界读/写, 报告精确到哪行代码哪线程
+    - 代价: kernel 运行慢 10-50×
+
+  CUDA 11.2+ 推荐用 compute-sanitizer (替代旧的 cuda-memcheck)
+
+最佳实践:
+  1. 开发时: 用 compute-sanitizer 检查所有新 kernel
+  2. 生产: 始终做好 idx < N 的边界检查
+  3. 调试诡异结果时: 第一个怀疑就是越界访问
+```
+
+
 ## 练习题
 
 完成 `vector_add.cu` 的阅读后，可以在 [`exercises/`](./exercises/) 目录下做以下练习：

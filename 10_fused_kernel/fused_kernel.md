@@ -2,6 +2,92 @@
 
 配合 `fused_kernel.cu` 阅读。
 
+**难度**: ⭐⭐ 进阶
+**前置知识**: Memory Bound 概念（[tutorial Part 4](../tutorial.md#part-4-内存是瓶颈--合并访问和性能分析)）
+**读完你能做什么**: 理解算子融合消除中间显存读写的工作原理，能判断哪些算子适合融合
+
+
+## 什么是算子融合 (Kernel Fusion)
+
+### 问题：中间结果的无谓搬运
+
+在 PyTorch 或 TensorFlow 中，一个"简单"的操作经常被拆成多个 kernel：
+
+```python
+out = F.relu(x)        # kernel 1
+out = out * scale       # kernel 2
+out = out + bias        # kernel 3
+```
+
+看起来很干净，但看看 GPU 上到底发生了什么：
+
+```
+kernel 1 (ReLU):
+  从显存读 x (N 个 float) → 计算 max(0,x) → 写回显存 (N 个 float)
+  ~~~~~~ kernel 1 结束，所有线程退出 ~~~~~~
+
+kernel 2 (Scale):
+  从显存读 kernel 1 的输出 (N 个 float) → 乘以 scale → 写回显存
+  ~~~~~~ kernel 2 结束 ~~~~~~
+
+kernel 3 (Bias):
+  从显存读 kernel 2 的输出 (N 个 float) → 加 bias → 写回显存
+  ~~~~~~ kernel 3 结束 ~~~~~~
+
+显存读写统计:
+  读: 3N 次  (每个 kernel 读一次主数组)
+  写: 3N 次  (每个 kernel 写一次主数组)
+  总搬运量: 6N × 4B (float)
+```
+
+但实际计算只有 `max + 乘 + 加` = 3 次运算/元素。
+**大部分时间花在等显存搬运上，而不是计算上！**
+
+而且 kernel 1 写到显存的中间结果，kernel 2 马上就要读回来。
+这个"写出去再读回来"完全是浪费——如果不出去不就不用读了吗？
+
+
+### 融合：让中间结果留在寄存器
+
+```cuda
+// 融合后: 1 个 kernel 搞定
+__global__ void fused_relu_scale_bias(float *x, float *out,
+                                       float scale, float bias, int n) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < n) {
+        float val = x[i];              // 从显存读 1 次
+        val = fmaxf(val, 0.0f);        // relu — 在寄存器中!
+        val = val * scale;              // scale — 在寄存器中!
+        val = val + bias;              // bias — 在寄存器中!
+        out[i] = val;                  // 写回显存 1 次
+    }
+}
+```
+
+```
+显存读写统计:
+  读: N 次 (只读一次 x)
+  写: N 次 (只写一次 out)
+  总搬运量: 2N × 4B
+
+对比:
+  未融合: 6N × 4B 搬运
+  融合后: 2N × 4B 搬运
+  → 搬运量减少 3 倍!
+
+对于 Memory Bound 算子 (几乎所有 elementwise 算子都是):
+  性能 ≈ 正比于 1/搬运量 → 理论加速 ~3 倍!
+```
+
+**为什么能快这么多？**
+
+中间结果 (relu 的输出, scale 的输出) 从头到尾都在寄存器里，
+寄存器延迟 = 0 cycle，而显存延迟 = ~500 cycle。
+省掉的不只是带宽，还有每次 kernel launch 的固定开销（~5μs）。
+
+这就是为什么 `torch.compile`、TensorRT、XLA 都把算子融合
+作为最重要的优化——它是深度学习推理优化中投入产出比最高的手段。
+
 
 ## 为什么算子融合是 Memory Bound 算子最重要的优化
 
@@ -96,6 +182,36 @@ float4 LDG.128: 每条指令加载 4 个 float (16B)
   → 空出的 pipeline slots 可以被计算指令使用
 
 融合 + float4 = 最优: 最少的 HBM 访问 + 最少的 LD/ST 指令
+
+
+### float4 的对齐要求 — 为什么不对齐会适得其反
+
+```
+float4 = 16 bytes → LDG.128 要求地址 16B 对齐!
+
+如果地址不对齐 (addr % 16 != 0):
+  单个 LDG.128 被硬件拆成 2 次甚至更多次事务
+  → 不仅没加速, 反而更慢!
+  → 实测: 非对齐的 LDG.128 比标量 LDG.32 慢 ~15%
+
+如何确保对齐:
+  1. cudaMalloc 默认返回 256B 对齐的地址 → 满足 16B 对齐 ✓
+  2. 用 reinterpret_cast<float4*>(ptr + offset):
+     offset 必须是 16B 的倍数 (即 offset 是 4 的倍数)
+  3. 用自定义结构体: 需要 __align__(16) 修饰
+  
+    // ✗ 可能不对齐: offset=2 (只有 2 个 float < 4)
+    float4 *bad = reinterpret_cast<const float4*>(ptr + 2);
+    // → 如果 ptr 是 256B 对齐, ptr+8 不是 16B 对齐 → LDG.128 被拆分!
+    
+    // ✓ 安全: offset 是 4 的倍数
+    float4 *good = reinterpret_cast<const float4*>(ptr + 4);
+    // → ptr+16 = 256+16=272, 16B 对齐 ✓
+
+对齐检查清单:
+  ✓ N (每线程处理的总数) 是 4 的倍数 → 最后一批不会跨过 float4 边界
+  ✓ 起始地址 16B 对齐 (cudaMalloc 保证, malloc 不保证 — 用 posix_memalign)
+  ✓ reinterpret_cast 的偏移量是 4 的倍数
 ```
 
 

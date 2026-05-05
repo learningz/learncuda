@@ -2,6 +2,80 @@
 
 配合 `gemm_register.cu` 阅读。
 
+**难度**: ⭐⭐⭐ 专家
+**前置知识**: Shared Memory Tiled 矩阵乘法（[`02_matrix_mul/`](../02_matrix_mul/)）；内存层级（[`theory/03_memory_hierarchy.md`](../theory/03_memory_hierarchy.md)）
+**读完你能做什么**: 理解 Register Blocking 的硬件原理，能写出每线程计算 4×4 tile 的 GEMM kernel
+
+
+## 什么是 Register Tiling (寄存器分块)
+
+### 从 02_matrix_mul 的瓶颈说起
+
+在 02_matrix_mul 中，你学了用 Shared Memory 缓存数据块（Tiling），
+把显存访问量减少了 ~16 倍。但优化之后，新的瓶颈出现了：
+**Shared Memory 本身的读取量太大了。**
+
+来看看朴素 Tiled GEMM 中每个线程在干什么：
+
+```
+每个线程算 C 矩阵的 1 个元素: C[row][col]
+
+C[row][col] = Σ(k=0..K-1) A[row][k] × B[k][col]
+
+Tiling 后, K 维度被切成 K/16 = 若干块, 每块 16:
+  for (int t = 0; t < K/16; t++) {
+      // 从 SMEM 读 A 的一行中的 16 个值: A_s[ty][0..15]
+      // 从 SMEM 读 B 的一列中的 16 个值: B_s[0..15][tx]
+      for (int i = 0; i < 16; i++)
+          sum += A_s[ty][i] * B_s[i][tx];
+  }
+
+这个内循环:
+  做了 16 次乘加 (16 FLOP)
+  读了 A_s 16 次 + 读了 B_s 16 次 = 32 次 SMEM 读
+  → 每做 1 次乘加, 要从 SMEM 读 2 次
+  → SMEM 带宽成为新瓶颈!
+```
+
+### Register Tiling 的思路
+
+**让每个线程不止算 1 个元素，而是算一个小块 (如 4×4 = 16 个元素)**。
+
+```
+原来: 1 个线程 → 1 个输出元素
+      每次乘加需要从 SMEM 读 A 1 次 + B 1 次 = 2 次读
+
+Register Tiling (TM=4, TN=4):
+  1 个线程 → 4×4 = 16 个输出元素
+  
+  内循环:
+      // 从 SMEM 读 A 的 4 个值, 放到寄存器 a[0..3]
+      // 从 SMEM 读 B 的 4 个值, 放到寄存器 b[0..3]
+      for (int ti = 0; ti < 4; ti++)
+          for (int tj = 0; tj < 4; tj++)
+              c[ti][tj] += a[ti] * b[tj];
+  
+  做了 4×4 = 16 次乘加 (16 FLOP)
+  读了 A 4 次 + B 4 次 = 8 次 SMEM 读
+  → 每做 1 次乘加, 只需 8/16 = 0.5 次 SMEM 读
+  → SMEM 读取量减少 4 倍!
+```
+
+**为什么能减少？** 关键是 **数据复用**：
+```
+a[0] 被用了 4 次 (和 b[0], b[1], b[2], b[3] 各乘一次)
+b[0] 也被用了 4 次 (和 a[0], a[1], a[2], a[3] 各乘一次)
+
+读 1 次 a[0], 复用 4 次 → 复用率 4×
+读 1 次 b[0], 复用 4 次 → 复用率 4×
+
+原来: 读 2 次, 做 1 次乘加 → 读/算 = 2
+现在: 读 8 次, 做 16 次乘加 → 读/算 = 0.5 → 改善 4×
+```
+
+这也是 cuBLAS 和 CUTLASS 的基本思路——只是它们的 TM, TN 更大 (如 8×8)，
+加上 Tensor Core，数据复用率更高。
+
 
 ## 为什么需要 Register Tiling
 
@@ -76,6 +150,19 @@ Register Tiled 版 (Thread Tile = 4×4):
 
 ## Block Tile 和 Thread Tile 的空间分解
 
+先定义本节用到的变量（以本程序的配置为例）：
+
+```
+变量    含义                         本例取值
+────    ────                        ────────
+BM      每个 Block 处理的 M 方向元素数    64
+BN      每个 Block 处理的 N 方向元素数    64
+BK      每次 K 方向循环加载的元素数        8
+TM      每个线程处理的 M 方向元素数        4
+TN      每个线程处理的 N 方向元素数        4
+M,N,K   矩阵维度 (C = A[M×K] × B[K×N])  1024
+```
+
 ```
 整个 GEMM:  C[M × N] = A[M × K] × B[K × N]
 
@@ -116,6 +203,46 @@ Register Tiled 版 (Thread Tile = 4×4):
   循环 K/BK = 1024/8 = 128 次
 ```
 
+
+### Thread Tile 到 Global Memory 的索引映射
+
+以上面 BM=BN=64, TM=TN=4 的配置为例, 推导线程如何找到自己负责的 C 元素:
+
+```
+给定: blockIdx, threadIdx, blockDim = (BM/TM, BN/TN) = (16, 16)
+
+Step 1: Block 的全局起始位置
+  block_row_start = blockIdx.y × BM = blockIdx.y × 64
+  block_col_start = blockIdx.x × BN = blockIdx.x × 64
+
+Step 2: 本线程在 Block 内的 Tile 坐标
+  线程的 2D 索引:
+    tx = threadIdx.x % 16     (列方向, 0..15)
+    ty = threadIdx.x / 16     (行方向, 0..15)
+
+Step 3: Tile 内的元素偏移
+  线程 (tx, ty) 负责第 (ty, tx) 个 4×4 Tile:
+    tile_row_start = block_row_start + ty × TM = block_row_start + ty × 4
+    tile_col_start = block_col_start + tx × TN = block_col_start + tx × 4
+
+Step 4: Tile 内每个元素的全局坐标
+  对于 c_reg[ki][kj] (ki, kj in 0..3):
+    global_row = tile_row_start + ki
+    global_col = tile_col_start + kj
+    C[global_row × N + global_col] = c_reg[ki][kj]
+
+完整的索引计算 (在 kernel 末尾写回时):
+  int row = blockIdx.y * 64 + (threadIdx.x / 16) * 4 + ki;
+  int col = blockIdx.x * 64 + (threadIdx.x % 16) * 4 + kj;
+  C[row * N + col] = c_reg[ki][kj];
+```
+
+**边界条件**: 当 M 或 N 不是 BM/BN 的倍数时:
+```
+  if (row < M && col < N) C[row * N + col] = c_reg[ki][kj];
+  加载 A/B 时: 如果 global_row >= M 或 global_col >= N → 填 0
+  K 维度最后一块不足 BK → SMEM 中多余部分填 0
+```
 
 ## 寄存器使用量的影响
 
@@ -168,6 +295,8 @@ Register Tiled 版 (Thread Tile = 4×4):
 
 3. Swizzle 布局
    调整 SMEM 中的数据排列，消除 Bank Conflict
+   (Bank = Shared Memory 的 32 个 4B 存储体; 同 Bank 不同地址 → 串行化;
+    Bank编号 = (字节地址 / 4) % 32; 详见 05_bank_conflict/)
    → SMEM 读取不再有串行化
 
 4. Tensor Core ([theory/06_tensor_core.md](../theory/06_tensor_core.md))

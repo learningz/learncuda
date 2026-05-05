@@ -47,9 +47,54 @@ using namespace nvcuda;
 #define WMMA_K 16
 
 // 矩阵大小 (必须是 WMMA tile 大小的倍数)
-#define M 64
-#define N 64
-#define K 64
+// 用 512 可以比 64 更好地展示 Tensor Core 的优势
+#define M 512
+#define N 512
+#define K 512
+
+// ---- 对比用: FP32 naive GEMM ----
+__global__ void gemm_fp32_naive(const float *A, const float *B, float *C,
+                                  int m, int n, int k) {
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    if (row >= m || col >= n) return;
+    float sum = 0.0f;
+    for (int i = 0; i < k; i++) sum += A[row * k + i] * B[i * n + col];
+    C[row * n + col] = sum;
+}
+
+// ---- 对比用: FP16 naive GEMM (CUDA Core) ----
+__global__ void gemm_fp16_naive(const __half *A, const __half *B, float *C,
+                                  int m, int n, int k) {
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    if (row >= m || col >= n) return;
+    float sum = 0.0f;
+    for (int i = 0; i < k; i++)
+        sum += __half2float(A[row * k + i]) * __half2float(B[i * n + col]);
+    C[row * n + col] = sum;
+}
+
+// ---- 对比用: FP32 Shared Memory Tiled GEMM ----
+#define TILE_SIZE 16
+__global__ void gemm_fp32_tiled(const float *A, const float *B, float *C,
+                                  int m, int n, int k) {
+    __shared__ float As[TILE_SIZE][TILE_SIZE];
+    __shared__ float Bs[TILE_SIZE][TILE_SIZE];
+    int row = blockIdx.y * TILE_SIZE + threadIdx.y;
+    int col = blockIdx.x * TILE_SIZE + threadIdx.x;
+    float sum = 0.0f;
+    for (int t = 0; t < k; t += TILE_SIZE) {
+        As[threadIdx.y][threadIdx.x] = (row < m && t + threadIdx.x < k)
+            ? A[row * k + t + threadIdx.x] : 0.0f;
+        Bs[threadIdx.y][threadIdx.x] = (t + threadIdx.y < k && col < n)
+            ? B[(t + threadIdx.y) * n + col] : 0.0f;
+        __syncthreads();
+        for (int i = 0; i < TILE_SIZE; i++) sum += As[threadIdx.y][i] * Bs[i][threadIdx.x];
+        __syncthreads();
+    }
+    if (row < m && col < n) C[row * n + col] = sum;
+}
 
 // ---- WMMA Kernel ----
 // 每个 Warp 计算 C 的一个 16×16 tile
@@ -140,7 +185,7 @@ int main() {
 
     cpu_gemm(hA, hB, hC_ref, M, N, K);
 
-    // GPU
+    // GPU 显存分配
     half *dA, *dB; float *dC;
     CUDA_CHECK(cudaMalloc(&dA, sA));
     CUDA_CHECK(cudaMalloc(&dB, sB));
@@ -148,48 +193,117 @@ int main() {
     CUDA_CHECK(cudaMemcpy(dA, hA, sA, cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(dB, hB, sB, cudaMemcpyHostToDevice));
 
-    // Launch 配置:
-    // 每个 Warp 处理一个 16×16 tile → 需要 (M/16) × (N/16) 个 Warp
-    // 每个 Block: 4 个 Warp (128 线程 = 4×32)
-    // 线程布局: blockDim.x = 128, blockDim.y = 1
-    // Grid: 需要覆盖 N/16 个 warpN (每个 Warp 占 32 个 threadIdx.x)
-    //        和 M/16 个 warpM (通过 blockIdx.y)
-    dim3 block(128, 1);  // 128 线程 = 4 Warps
-    dim3 grid(N / WMMA_N / (128/32), M / WMMA_M);  // grid.x=1, grid.y=4
+    // 辅助: 计时 Lambda
+    auto time_kernel = [&](const char *label, auto launch_fn, int warmup, int iters) {
+        for (int r = 0; r < warmup; r++) launch_fn();
+        CUDA_CHECK(cudaDeviceSynchronize());
+        cudaEvent_t t0, t1;
+        CUDA_CHECK(cudaEventCreate(&t0)); CUDA_CHECK(cudaEventCreate(&t1));
+        CUDA_CHECK(cudaEventRecord(t0));
+        for (int r = 0; r < iters; r++) launch_fn();
+        CUDA_CHECK(cudaEventRecord(t1));
+        CUDA_CHECK(cudaEventSynchronize(t1));
+        float ms; CUDA_CHECK(cudaEventElapsedTime(&ms, t0, t1));
+        ms /= iters;
+        double gflops = 2.0 * M * N * K / (ms * 1e6);
+        double tflops_peak = 19.5; // A100 FP32 peak
+        printf("  %-40s %8.3f ms  %8.1f GFLOPS  (%5.1f%% peak)\n",
+               label, ms, gflops, gflops / (tflops_peak * 1e3) * 100);
+        CUDA_CHECK(cudaEventDestroy(t0)); CUDA_CHECK(cudaEventDestroy(t1));
+    };
 
-    wmma_gemm<<<grid, block>>>(dA, dB, dC, M, N, K);
+    printf("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+    printf("性能对比: 不同 GEMM 实现 (M=N=K=%d)\n", M);
+    printf("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+
+    // ---- 1. FP32 naive ----
+    {
+        size_t b32 = M * K * sizeof(float);
+        float *hA32 = (float*)malloc(b32), *hB32 = (float*)malloc(b32);
+        for (int i = 0; i < M*K; i++) hA32[i] = (rand()%10-5)/5.0f;
+        for (int i = 0; i < K*N; i++) hB32[i] = (rand()%10-5)/5.0f;
+        float *dA32, *dB32, *dC32;
+        CUDA_CHECK(cudaMalloc(&dA32, b32));
+        CUDA_CHECK(cudaMalloc(&dB32, b32));
+        CUDA_CHECK(cudaMalloc(&dC32, M*N*sizeof(float)));
+        CUDA_CHECK(cudaMemcpy(dA32, hA32, b32, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(dB32, hB32, b32, cudaMemcpyHostToDevice));
+        dim3 b1(16, 16), g1((N+15)/16, (M+15)/16);
+        time_kernel("1. FP32 naive (CUDA Core, no tiling)",
+            [&]{ gemm_fp32_naive<<<g1, b1>>>(dA32, dB32, dC32, M, N, K); }, 5, 20);
+        CUDA_CHECK(cudaFree(dA32)); CUDA_CHECK(cudaFree(dB32)); CUDA_CHECK(cudaFree(dC32));
+        free(hA32); free(hB32);
+    }
+
+    // ---- 2. FP32 tiled (Shared Memory) ----
+    {
+        size_t b32 = M * K * sizeof(float);
+        float *hA32 = (float*)malloc(b32), *hB32 = (float*)malloc(b32);
+        for (int i = 0; i < M*K; i++) hA32[i] = (rand()%10-5)/5.0f;
+        for (int i = 0; i < K*N; i++) hB32[i] = (rand()%10-5)/5.0f;
+        float *dA32, *dB32, *dC32;
+        CUDA_CHECK(cudaMalloc(&dA32, b32));
+        CUDA_CHECK(cudaMalloc(&dB32, b32));
+        CUDA_CHECK(cudaMalloc(&dC32, M*N*sizeof(float)));
+        CUDA_CHECK(cudaMemcpy(dA32, hA32, b32, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(dB32, hB32, b32, cudaMemcpyHostToDevice));
+        dim3 b2(TILE_SIZE, TILE_SIZE), g2((N+TILE_SIZE-1)/TILE_SIZE, (M+TILE_SIZE-1)/TILE_SIZE);
+        time_kernel("2. FP32 tiled (Shared Memory, CUDA Core)",
+            [&]{ gemm_fp32_tiled<<<g2, b2>>>(dA32, dB32, dC32, M, N, K); }, 5, 20);
+        CUDA_CHECK(cudaFree(dA32)); CUDA_CHECK(cudaFree(dB32)); CUDA_CHECK(cudaFree(dC32));
+        free(hA32); free(hB32);
+    }
+
+    // ---- 3. FP16 naive (CUDA Core) ----
+    {
+        size_t b16 = M * K * sizeof(half);
+        half *hA16 = (half*)malloc(b16), *hB16 = (half*)malloc(b16);
+        for (int i = 0; i < M*K; i++) hA16[i] = __float2half((rand()%10-5)/5.0f);
+        for (int i = 0; i < K*N; i++) hB16[i] = __float2half((rand()%10-5)/5.0f);
+        half *dA16, *dB16; float *dC16;
+        CUDA_CHECK(cudaMalloc(&dA16, b16));
+        CUDA_CHECK(cudaMalloc(&dB16, b16));
+        CUDA_CHECK(cudaMalloc(&dC16, M*N*sizeof(float)));
+        CUDA_CHECK(cudaMemcpy(dA16, hA16, b16, cudaMemcpyHostToDevice));
+        CUDA_CHECK(cudaMemcpy(dB16, hB16, b16, cudaMemcpyHostToDevice));
+        dim3 b3(16, 16), g3((N+15)/16, (M+15)/16);
+        time_kernel("3. FP16 naive (CUDA Core, no tiling)",
+            [&]{ gemm_fp16_naive<<<g3, b3>>>(dA16, dB16, dC16, M, N, K); }, 5, 20);
+        CUDA_CHECK(cudaFree(dA16)); CUDA_CHECK(cudaFree(dB16)); CUDA_CHECK(cudaFree(dC16));
+        free(hA16); free(hB16);
+    }
+
+    // ---- 4. FP16 Tensor Core (WMMA) ----
+    {
+        dim3 block(128, 1);
+        dim3 grid_wmma(N / WMMA_N / (128/32), M / WMMA_M);
+        time_kernel("4. FP16 Tensor Core (WMMA, 16×16×16)",
+            [&]{ wmma_gemm<<<grid_wmma, block>>>(dA, dB, dC, M, N, K); }, 10, 50);
+    }
+
+    printf("\n注意: FP32 peak = 19.5 TFLOPS (A100). FP16 Tensor Core peak = 312 TFLOPS.\n");
+    printf("小矩阵受限于 launch overhead + 内存延迟, 大矩阵 (4096+) 才能接近峰值.\n");
+
+    // ---- 验证 WMMA 正确性 ----
+    printf("\n正确性验证:\n");
+    wmma_gemm<<<dim3(N/WMMA_N/(128/32), M/WMMA_M), dim3(128,1)>>>(dA, dB, dC, M, N, K);
     CUDA_CHECK(cudaGetLastError());
     CUDA_CHECK(cudaMemcpy(hC_gpu, dC, sC, cudaMemcpyDeviceToHost));
 
-    // 验证
     float max_err = 0;
     for (int i = 0; i < M*N; i++)
         max_err = fmaxf(max_err, fabsf(hC_ref[i] - hC_gpu[i]));
-
-    printf("正确性: 最大误差 = %.4f  %s\n", max_err, max_err < 0.5f ? "✓" : "✗");
-    printf("  (FP16 精度只有 ~3 位有效数字, 所以误差较大是正常的)\n");
-
-    // 计时
-    cudaEvent_t t0, t1;
-    cudaEventCreate(&t0); cudaEventCreate(&t1);
-    cudaEventRecord(t0);
-    for (int r = 0; r < 1000; r++)
-        wmma_gemm<<<grid, block>>>(dA, dB, dC, M, N, K);
-    cudaEventRecord(t1); cudaEventSynchronize(t1);
-    float ms; cudaEventElapsedTime(&ms, t0, t1); ms /= 1000;
-    double gflops = 2.0 * M * N * K / (ms * 1e6);
-    printf("  性能: %.3f ms, %.1f GFLOPS\n", ms, gflops);
-    printf("  (矩阵很小, 无法喂饱 Tensor Core → GFLOPS 远低于峰值, 这是正常的)\n");
-    printf("  (大矩阵如 4096×4096 才能接近峰值 → cuBLAS 会自动处理)\n");
+    printf("  FP16 WMMA vs CPU 参考: 最大误差 = %.4f  %s\n",
+           max_err, max_err < 0.5f ? "(FP16 精度正常)" : "✗ 异常!");
 
     printf("\n关键点:\n");
     printf("  1. 代码中没有手写乘法循环! wmma::mma_sync 一条调用完成 16×16×16 乘加\n");
     printf("  2. Fragment 是分散在 32 线程中的 — 你不需要知道具体分布\n");
     printf("  3. FP16 输入 + FP32 累加 → Tensor Core 的标准使用模式\n");
-    printf("  4. B 用列主序 → Tensor Core 的硬件要求, 不同 layout 需要不同 Fragment 声明\n");
+    printf("  4. B 用列主序 → Tensor Core 的硬件要求\n");
+    printf("  5. 对比 CUDA Core GEMM, 看 Tensor Core 的吞吐优势\n");
 
     cudaFree(dA); cudaFree(dB); cudaFree(dC);
     free(hA); free(hB); free(hC_ref); free(hC_gpu);
-    cudaEventDestroy(t0); cudaEventDestroy(t1);
     return 0;
 }

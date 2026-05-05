@@ -2,6 +2,120 @@
 
 配合 `coalescing.cu` 阅读。
 
+**难度**: ⭐⭐ 进阶
+**前置知识**: GPU 内存层级基础（[tutorial Part 2](../tutorial.md#part-2-让它更快--shared-memory-和矩阵乘法)）
+**读完你能做什么**: 理解 Cache Line 和内存事务的硬件行为，能写出合并访问的 kernel
+
+
+## 什么是合并访问 (Coalesced Access)
+
+### 显存不是一次给你一个数
+
+你可能以为 `data[i]` 就是从显存读一个 float (4 字节)。
+实际上，GPU 显存有**两层最小传输单位**：
+
+- **Sector (32 字节)**: HBM 到 L2 Cache 的最小传输单位。
+  即使你只要 4 字节，DRAM 芯片也会返回整个 32 字节 sector 给 L2。
+- **Cache Line (128 字节)**: L2 Cache 到 L1 Cache/SM 的最小传输单位。
+  1 个 cache line = 4 个连续的 sector（128 = 4 × 32）。
+
+也就是说，哪怕你只要 1 个 float (4 字节)，
+硬件实际上传输了一整个 cache line (128 字节) 到 L1 — 其余 124 字节白传了。
+
+分层来看：
+
+```
+HBM (DRAM 芯片)
+  │
+  │ sector = 32B (最小 burst, DRAM 物理限制)
+  ▼
+L2 Cache (片上, 所有 SM 共享)
+  │
+  │ cache line = 128B = 4 sectors
+  ▼
+L1 Cache / SMEM (每个 SM 独立)
+  │
+  │ 实际请求的 4B 写入寄存器
+  │ 剩余 124B 留在 L1 (可能被后续访问命中)
+  ▼
+Register
+```
+
+### 关键在于：一个 Warp 的 32 个线程一起发请求
+
+GPU 不是一个线程一个线程地发内存请求，而是一个 Warp (32 线程) 一起发。
+硬件会把这 32 个地址"打包"，看看它们一共触及了多少个 Cache Line：
+
+```
+情况 A — 合并访问:
+  Thread 0 要 data[0]   → 地址 0
+  Thread 1 要 data[1]   → 地址 4
+  Thread 2 要 data[2]   → 地址 8
+  ...
+  Thread 31 要 data[31] → 地址 124
+
+  32 个 float × 4B = 128B → 正好 1 个 Cache Line!
+  → 硬件只发 1 次内存请求 → 传输 128B, 全部有用 → 效率 100%
+
+情况 B — stride=32 访问:
+  Thread 0 要 data[0]      → 地址 0      → Cache Line 0
+  Thread 1 要 data[32]     → 地址 128    → Cache Line 1
+  Thread 2 要 data[64]     → 地址 256    → Cache Line 2
+  ...
+  Thread 31 要 data[31×32] → 地址 3968   → Cache Line 31
+
+  32 个 float 分散在 32 个不同的 Cache Line!
+  → 硬件发 32 次内存请求!
+  → 传输 32 × 128B = 4096B, 只用了 32 × 4B = 128B
+  → 效率 128/4096 = 3%! 浪费 97% 的带宽!
+
+情况 C — 随机访问:
+  Thread 0 要 data[random_0]
+  Thread 1 要 data[random_1]
+  ...
+  32 个随机地址，大概率落在 20-32 个不同的 Cache Line
+  → 效率更低，通常 < 5%
+```
+
+### 为什么差距这么大
+
+用快递来理解：
+
+```
+合并访问 = 你们整栋楼 32 户人家合买的东西恰好装在 1 个包裹里
+  → 快递员来一趟就送完了
+
+stride 访问 = 32 户人家的东西分装在 32 个包裹里，每个包裹只有 1 件
+  → 快递员要跑 32 趟!
+  → 而且每个包裹箱子一样大 (128B Cache Line)，浪费了 97% 的箱子空间!
+```
+
+**这不是 10% 的性能差异，而是 10-30 倍的差距。**
+
+### 怎么写出合并的代码
+
+规则很简单：**让同一 Warp 的相邻线程访问相邻的内存地址。**
+
+```cuda
+// ✓ 合并: 相邻线程访问相邻地址
+output[idx] = input[idx];
+// Thread 0 读 input[0], Thread 1 读 input[1], ... → 地址连续 → 合并!
+
+// ✗ 不合并: 相邻线程访问间隔很大的地址
+output[idx] = input[idx * stride];
+// Thread 0 读 input[0], Thread 1 读 input[stride], ... → 间隔 stride → 不合并!
+
+// 常见陷阱 — 行优先 vs 列优先:
+// 矩阵 A[M][N], 如果让 threadIdx.x 对应行 (M 维度)
+//   Thread 0 读 A[0][col], Thread 1 读 A[1][col]
+//   → 地址间隔 N×4 字节 → 不合并!
+// 正确做法: threadIdx.x 对应列 (N 维度)
+//   Thread 0 读 A[row][0], Thread 1 读 A[row][1]
+//   → 地址连续 → 合并!
+```
+
+下面用三种具体的访问模式在硬件上看到差异。
+
 
 ## 三种访问模式在硬件上的真实差异
 
@@ -42,25 +156,23 @@ stride=32 访问:
 ```
 程序输出的"有效带宽"怎么算:
 
-  严格来说, 有效带宽 = 程序真正完成的有用字节数 / 时间。
+  有效带宽 = 实际传输的有用数据量 / 耗时
 
-  在这个示例里, kernel 的主要工作是读取 N 个 float，写回只有一个很小的结果槽位。
-  所以更准确的口径应该把它看成"以读取为主的带宽测试"。
+  连续访问 (stride=1):
+    32 线程 × 4B = 128B 有用数据
+    触发了 1 次 128B cache line 传输 = 128B 的总传输
+    效率 = 128/128 = 100%
+    实测: N=4M, 耗时 0.02ms → 有效带宽 = 4M × 4B / 0.02ms = 800 GB/s
+  
+  stride=32 访问:
+    32 线程 × 4B = 128B 有用数据
+    触发了 32 次 128B cache line 传输 = 4096B 的总传输
+    效率 = 128/4096 = 3.125%
+    实测: N=4M, 耗时 0.6ms → 有效带宽 = 16MB / 0.6ms = 26.7 GB/s
 
-  为了便于和常见的 streaming kernel 直觉对齐，代码里用了一个简化估算:
-    有效带宽 ≈ N × 4 bytes / 时间
-
-  例: N=4M, 连续访问耗时 0.02ms:
-  按读取流量估算, 有效带宽 ≈ 4M × 4B / 0.02ms = 800 GB/s
-
-  如果把程序改成读 N 写 N 的标准 streaming kernel，
-  那么同样的 0.02ms 会对应约 1600 GB/s。
-
-  stride=32 耗时 0.6ms:
-  按读取流量估算, 有效带宽 ≈ 16MB / 0.6ms = 26.7 GB/s → 极差!
-
-  差距仍然主要来自合并/非合并访问的差异。
-  GPU 的 HBM 带宽没变, 但大量带宽被浪费在传输不需要的数据上。
+  差距 = 800/26.7 ≈ 30×, 全部来自浪费的 cache line 传输。
+  GPU 的 HBM 物理带宽没变, 但 97% 的传输被浪费在不需要的数据上。
+  → 非合并访问让你的 2TB/s 带宽退化到 ~27GB/s 可用带宽。
 ```
 
 
@@ -127,9 +239,39 @@ Step 4: 数据返回
     → 32 线程跨越 512B = 4 条 CL → 效率 25%
     → 而且 y, z, w 被传输了但没使用 → 75% 浪费
 
+  内存布局 (AoS — Array of Structures):
+  
+  地址 →   +0   +4   +8  +12  +16  +20  +24  +28  +32  +36  +40  +44
+          ┌────┬────┬────┬────┬────┬────┬────┬────┬────┬────┬────┬────┐
+          │ x0 │ y0 │ z0 │ w0 │ x1 │ y1 │ z1 │ w1 │ x2 │ y2 │ z2 │ w2 │...
+          └────┴────┴────┴────┴────┴────┴────┴────┴────┴────┴────┴────┘
+           ← 线程 0 要的 →           ← 线程 1 要的 →   ← 线程 2 要的 →
+           
+  只读 x 时: 真正需要的 float 分布在 addr+0, +16, +32, +48,... 
+  → 每 16 字节才有一个有用的 4 字节 → Cache Line 中 75% 的数据浪费!
+  → 而且 32 线程 × 16B 间隔 = 512B = 4 个 cache line → 4 次事务 → 效率 25%
+
   修复: SoA (Structure of Arrays)
+
+  内存布局 (SoA — Structure of Arrays):
+
+  地址 →   +0   +4   +8  +12  +16  +20  +24  +28
+          ┌────┬────┬────┬────┬────┬────┬────┬────┐
+          │ x0 │ x1 │ x2 │ x3 │ x4 │ x5 │ x6 │ x7 │...  (所有 x 连续存储)
+          └────┴────┴────┴────┴────┴────┴────┴────┘
+           ← 线程 0-7 要的, 全部连续! →
+
+          ┌────┬────┬────┬────┬────┬────┬────┬────┐
+          │ y0 │ y1 │ y2 │ y3 │ y4 │ y5 │ y6 │ y7 │...  (所有 y 连续存储)
+          └────┴────┴────┴────┴────┴────┴────┴────┘
+
+          ┌────┬────┬────┬────┬────┬────┬────┬────┐
+          │ z0 │ z1 │ z2 │ z3 │ z4 │ z5 │ z6 │ z7 │...  (所有 z 连续存储)
+          └────┴────┴────┴────┴────┴────┴────┴────┘
+
   float *x_array = ..., *y_array = ..., *z_array = ..., *w_array = ...;
   float x = x_array[tid];  // 相邻线程连续 → 完美合并!
+  // 32 线程需要 128B → 刚好 1 个 cache line → 1 次事务 → 效率 100%
 
 模式 2: 矩阵的列访问
 
@@ -158,6 +300,62 @@ Step 4: 数据返回
   }
   // 这里的 Shared Memory 访问模式没问题 (连续 Bank)
   // 但如果对全局内存这样做就会有合并问题
+```
+
+
+## 写合并 (Write Coalescing) — 写入也有同样的规则
+
+```
+前面说了读取需要合并, 写入同理!
+
+STG (Store Global) 指令:
+  STG.E.32 [Raddr], Rval  → 写 1 个 float (4B)
+  STG.E.128 [Raddr], Rval  → 写 4 个 float (16B), 向量化写入
+
+Warp 的 32 线程一起执行 STG 时:
+  LD/ST Unit 同样收集 32 个地址 → 合并到同一 Cache Line → 1 次写事务
+
+写入的关键硬件路径:
+
+  情况 A — 合并写入:
+    Thread 0 → addr+0, Thread 1 → addr+4, ..., Thread 31 → addr+124
+    → 全在同一 128B Cache Line → 1 次写事务 → 效率 100%
+
+  情况 B — strided 写入:
+    每线程写不同 Cache Line → 32 次写事务 → 效率 3%
+
+写入和读取的关键区别:
+  1. L2 Write-Combine: 短时间内同一 Cache Line 的多次写入
+     在 L2 中合并成一次写回 HBM (通常是 Evict 时)
+     → 即使看起来是分散的小写, L2 也能部分缓冲
+
+  2. Sector Write Mask: 非合并写入时, 每次写事务只写一个 sector
+     L2 中的 Cache Line 是部分脏的 (Partial Write)
+     → 后续 Evict 时需要 Read-Modify-Write (读整行 → 改 → 写整行)
+     → 增加了 HBM 带宽浪费!
+
+  3. Write-Through vs Write-Back:
+     GPU L1 对全局内存一般是 Write-Through (直接写到 L2)
+     L2 是 Write-Back (标记脏, 延迟写回 HBM)
+     → 合并写入让 L2 更高效: 完整 Cache Line 脏 → 写回时一次性传输
+
+写入合并的常见问题:
+  问题 1: 分散写入
+    for (int i = tid; i < n; i += stride) output[i] = val;
+    → stride 大时, 每次写到不同 Cache Line → 不合并
+
+  问题 2: Atomic scatter
+    atomicAdd(&output[bin[tid]], val);
+    → 写入地址由 index 决定 → 随机 → 完全不合并
+
+  问题 3: Write Mask 不完整
+    只有部分线程活跃 (Warp Divergence) → 写入的数据 < 128B
+    但 Cache Line 仍然被标记为脏 → 同样需要 Read-Modify-Write
+
+ncu 查看写合并:
+  ncu --metrics l1tex__t_sectors_pipe_lsu_mem_global_op_st.sum \
+  ./your_program
+  → 写入的 sector 数 / 实际有用的字节数 → 写合并效率
 ```
 
 

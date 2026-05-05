@@ -89,6 +89,8 @@ CUDA Runtime (libcudart.so) 做的事:
    CPU 立即返回! (异步) 不等 GPU 执行。
    这一步 CPU 端延迟: ~3-8 μs (Launch Overhead)
 ```
+<p align="center"><img src="diagrams/02_cuda_programming_model_fig01.svg" alt="02_cuda_programming_model figure 1" /></p>
+
 
 ### Step 1: GPU Front-End — 命令处理器
 
@@ -116,6 +118,8 @@ Host Interface / Command Processor:
 │     Distribution Unit)                      │
 └────────────────────────────────────────────┘
 ```
+<p align="center"><img src="diagrams/02_cuda_programming_model_fig02.svg" alt="02_cuda_programming_model figure 2" /></p>
+
 
 ### Step 2: CTA Scheduler — 核心的 Block 分配引擎
 
@@ -176,6 +180,8 @@ CTA Scheduler 维护的状态:
 │   一旦所有 SM 都满了 → 等待某个 SM 上的 CTA 完成    │
 └──────────────────────────────────────────────────┘
 ```
+<p align="center"><img src="diagrams/02_cuda_programming_model_fig03.svg" alt="02_cuda_programming_model figure 3" /></p>
+
 
 ### Step 3: SM 接收 CTA — 资源初始化
 
@@ -239,6 +245,8 @@ SM 的 CTA Setup 硬件:
 │ 整个 CTA Setup 过程: ~几十个周期                   │
 └────────────────────────────────────────────────┘
 ```
+<p align="center"><img src="diagrams/02_cuda_programming_model_fig04.svg" alt="02_cuda_programming_model figure 4" /></p>
+
 
 ### Step 4: 第一条指令执行
 
@@ -336,6 +344,8 @@ Grid (网格) — 对应整个 GPU
     ├── Warp 1: Thread (0,1,0) ~ Thread (31,1,0)
     └── ...
 ```
+<p align="center"><img src="diagrams/02_cuda_programming_model_fig05.svg" alt="02_cuda_programming_model figure 5" /></p>
+
 
 ### Grid — 最外层
 - 一个 kernel launch 产生一个 Grid
@@ -383,6 +393,8 @@ threadIdx.y:
 
 这些全在同一个 Warp 内。
 ```
+<p align="center"><img src="diagrams/02_cuda_programming_model_fig06.svg" alt="02_cuda_programming_model figure 6" /></p>
+
 
 ### 全局索引计算 — 详细推导
 
@@ -543,6 +555,8 @@ blockSize 的选择涉及多个因素的权衡:
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
+<p align="center"><img src="diagrams/02_cuda_programming_model_fig07.svg" alt="02_cuda_programming_model figure 7" /></p>
+
 
 ### 动态 Occupancy 查询 API
 
@@ -672,6 +686,8 @@ Warp Scheduler 会将执行相同 PC 位置的线程组合在一起执行 (Recon
    标记目标寄存器为"等待写入"
    当执行完成时，取消标记 → 依赖该寄存器的 Warp 变为 Eligible
 ```
+<p align="center"><img src="diagrams/02_cuda_programming_model_fig08.svg" alt="02_cuda_programming_model figure 8" /></p>
+
 
 ### PTX 与 SASS — 两层指令集
 
@@ -708,6 +724,8 @@ cuobjdump -sass kernel.cubin
 nvcc kernel.cu -o program
 cuobjdump -sass program
 ```
+<p align="center"><img src="diagrams/02_cuda_programming_model_fig09.svg" alt="02_cuda_programming_model figure 9" /></p>
+
 
 ### SASS 指令示例解读
 
@@ -764,6 +782,8 @@ Stream 实际上是软件概念 + 硬件支持:
   - 不同 Stream 中的 kernel 如果 SM 有空闲资源，可以并发
   - 但实际上大 kernel 通常会占满所有 SM，不留空间给其他 kernel
 ```
+<p align="center"><img src="diagrams/02_cuda_programming_model_fig10.svg" alt="02_cuda_programming_model figure 10" /></p>
+
 
 ### Stream 并发的详细示例
 
@@ -1208,7 +1228,114 @@ cudaMemAdvise(data, size, cudaMemAdviseSetAccessedBy, deviceId);
 ```
 
 
-## 2.8 本章总结
+## 2.8 CUDA Dynamic Parallelism — GPU 上动态启 kernel
+
+### 什么时候需要
+
+前面的所有 kernel 都是从 CPU 启动的：`kernel<<<grid, block>>>(args)`。
+但有些场景下，GPU 自己知道还需要做什么工作，不需要回头问 CPU：
+
+```
+场景 1: 递归 / 图遍历
+  CPU 无法知道图有多深 → 每层都要回传结果给 CPU → CPU 决定是否继续
+  Dynamic Parallelism: GPU 在遍历过程中自己决定是否启动新 kernel
+
+场景 2: 自适应计算
+  某些区域需要更多计算 (如物理模拟中的湍流区域)
+  每个 Block 可以检查自己负责的区域，按需启动子 kernel
+
+场景 3: Nested Parallelism
+  外层 kernel 做粗粒度划分 → 内层 kernel 做细粒度计算
+  → 省去启动大量 Block 的开销 (由 GPU 自己管理粒度)
+```
+
+### 基本用法
+
+```cuda
+#include <cuda_runtime.h>
+
+__global__ void child_kernel(float *data, int n) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < n) data[idx] *= 2.0f;
+}
+
+__global__ void parent_kernel(float *data, int n) {
+    int segment = blockIdx.x;
+    int seg_size = n / gridDim.x;
+
+    // 每个 Block 检查自己的数据段，决定是否需要精细化处理
+    if (needs_refinement(data + segment * seg_size, seg_size)) {
+        // 从 GPU 内部启动 kernel!
+        child_kernel<<<seg_size / 256 + 1, 256>>>(
+            data + segment * seg_size, seg_size);
+
+        // GPU 内部也需要同步:
+        cudaDeviceSynchronize();  // device-side synchronize!
+    }
+}
+
+int main() {
+    float *d_data;
+    cudaMalloc(&d_data, N * sizeof(float));
+
+    // 关键: GPU 上启 kernel 需要特殊的 launch 属性
+    cudaDeviceSetLimit(cudaLimitDevRuntimeSyncDepth, 4);  // 最多 4 层嵌套
+
+    parent_kernel<<<4, 1>>>(d_data, N);
+    cudaDeviceSynchronize();
+}
+```
+
+### 编译要求
+
+```bash
+# 需要额外 flag:
+#   -rdc=true: Relocatable Device Code (跨文件/跨编译单元的 device 调用)
+#   -lcudadevrt: 链接 CUDA Device Runtime 库
+nvcc -rdc=true -arch=sm_80 -o dyn_example dyn_example.cu -lcudadevrt
+```
+
+### 硬件限制和开销
+
+```
+1. 需要 Compute Capability >= 3.5 (Kepler+)
+   但实际可用的性能要 >= sm_60 (Pascal)
+
+2. 最大嵌套深度: 默认 24 层，实际建议 ≤ 2-3 层
+   每层嵌套都要消耗 SMEM + 寄存器来维护 parent 的状态
+
+3. 开销:
+   Device-side launch: ~5-10μs (和 CPU 端差不多)
+   → 只适合启动粒度较大的子 kernel (至少几百个 Block)
+   → 不要用来启动只有 1-2 个 Block 的小 kernel!
+   → 那不如在 kernel 内部用循环
+
+4. Device-side cudaMalloc/cudaFree:
+   支持! 但分配速度比 CPU 端慢，建议用预分配的内存池
+
+5. ncu 支持:
+   ncu --set full ./dyn_example
+   → 会显示 parent kernel 和 child kernel 的嵌套关系
+   → child kernel 的 Launch Statistics 会有 "Device Launched" 标记
+```
+
+### 什么时候不用
+
+```
+别用 Dynamic Parallelism 如果:
+  ✗ 子任务的工作量远小于 launch 开销 (>10μs → launch 就是纯浪费)
+  ✗ 可以用循环 + 条件判断代替 (大多数情况下!)
+  ✗ 子 kernel 只有少量 Block (1-10 个) → launch 开销 > 计算开销
+
+该用 Dynamic Parallelism 如果:
+  ✓ 递归深度无法在编译时确定 (图遍历、自适应计算)
+  ✓ 子任务在 GPU 内部就能决定是否需要，不需要回传 CPU
+  ✓ 减少 CPU↔GPU 同步的往返次数有价值
+```
+
+
+
+## 2.9 本章总结
 
 ```
 Kernel Launch 全路径:
@@ -1224,7 +1351,7 @@ Kernel Launch 全路径:
 ```
 
 
-## 2.9 Q&A
+## 2.10 Q&A
 
 ### Q: Kernel Launch 开销 ~5μs 是哪里花的? 能减少吗?
 
@@ -1265,7 +1392,7 @@ ncu 中的 "Launched CTAs" = 你 launch 的 Block 总数。
 ```
 
 
-## 2.10 练习题
+## 2.11 练习题
 
 配套代码在 [`theory/exercises/`](./exercises/) 目录下: [`ch02_ex1_blocksize.cu`](./exercises/ch02_ex1_blocksize.cu) / [`ch02_ex2_2d_index.cu`](./exercises/ch02_ex2_2d_index.cu) / [`ch02_ex3_async.cu`](./exercises/ch02_ex3_async.cu)
 

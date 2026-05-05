@@ -13,6 +13,39 @@
 GPU 芯片 (如 A100) 有 108 个 SM。
 128 个 Block 要分配到 108 个 SM 上执行。
 
+在深入看分配过程之前，先了解 SM 的资源限制从哪来:
+
+  SM 的硬件限制 (不同架构不同! 这里以 A100 / SM 8.0 为例):
+  
+  ┌────────────────────┬─────────┬───────────────────────────────────┐
+  │ 限制项             │ A100 值 │ 如何查询                           │
+  ├────────────────────┼─────────┼───────────────────────────────────┤
+  │ Max Threads / SM   │ 2048    │ cudaDeviceProp.maxThreadsPerMultiProcessor │
+  │ Max Warps / SM     │ 64      │ = maxThreadsPerMultiProcessor / 32 │
+  │ Max Blocks / SM    │ 32      │ cudaDeviceProp.maxBlocksPerMultiProcessor │
+  │ Max Registers / SM │ 65536   │ cudaDeviceProp.regsPerMultiprocessor │
+  │ Max SMEM / SM      │ 最大 164KB│ cudaDeviceProp.sharedMemPerMultiprocessor │
+  │                    │ (可配置) │ (取决于 SMEM 配置: 100KB/132KB/164KB) │
+  └────────────────────┴─────────┴───────────────────────────────────┘
+
+  用代码查询你当前 GPU 的限制:
+    cudaDeviceProp prop;
+    cudaGetDeviceProperties(&prop, 0);
+    printf("Max Threads / SM: %d\n", prop.maxThreadsPerMultiProcessor);
+    printf("Max Regs / SM:    %d\n", prop.regsPerMultiprocessor);
+    printf("Max SMEM / SM:    %zu KB\n", prop.sharedMemPerMultiprocessor / 1024);
+    printf("SM count:          %d\n", prop.multiProcessorCount);
+    
+  不同架构对比 (为什么不能写死数字):
+    Maxwell (GTX 980):   maxThreadsPerSM=2048, regsPerSM=65536, smem=96KB
+    Volta (V100):        maxThreadsPerSM=2048, regsPerSM=65536, smem=96KB
+    Ampere (A100):       maxThreadsPerSM=2048, regsPerSM=65536, smem=164KB
+    Ada (RTX 4090):      maxThreadsPerSM=1536, regsPerSM=65536, smem=100KB
+    Hopper (H100):       maxThreadsPerSM=2048, regsPerSM=65536, smem=228KB
+    
+  注意: maxThreadsPerSM 在 Ada Lovelace 上降到了 1536! 
+  所以不能假设所有 GPU 都是 2048。
+
 关键事实: Block 到 SM 的分配由硬件 (CTA Scheduler / GigaThread Engine) 完成,
           程序员无法控制, 也不应该假设特定 Block 在特定 SM 上。
 
@@ -30,12 +63,15 @@ GPU 芯片 (如 A100) 有 108 个 SM。
 │        检查 SM_i 是否有足够资源容纳这个 Block:                    │
 │          Thread Slot: 已用 + 256 ≤ 2048?                        │
 │          Warp Slot:   已用 + 8 ≤ 64?                            │
-│          Register:    已用 + 256×48 ≤ 65536?                    │
+│          Register:    已用 + 256×48 ≤ 65536?  ← 48 regs/thread  │
 │          Shared Mem:  已用 + block_smem ≤ 配置的 SMEM 总量?      │
 │          Block Slot:  已用 + 1 ≤ 32?                            │
 │        如果全部满足 → 分配! 更新 SM_i 的资源表                    │
 │        如果任何一项不足 → 跳过, 试下一个 SM                       │
-│      如果所有 SM 都装不下 → Block 在队列中等待                    │
+│      如果所有 SM 都装不下 → Block 在队列中等待                   │
+│                                                                 │
+│    关于 Register 的约束: 48 regs/thread 由编译器决定              │
+│    (nvcc --ptxas-options=-v 可查看)。详细分配见"第二层映射"Step 2.│                    │
 │                                                                 │
 │  本例 (128 Block, 256 线程, 48 reg/thread, 0 smem):             │
 │    每 Block 需要: 256 线程 = 8 Warp, 12288 寄存器               │
@@ -60,6 +96,8 @@ GPU 芯片 (如 A100) 有 108 个 SM。
 │        → 如果 gridSize=540 (108×5), 每 SM 正好 5 Block → 62.5%  │
 └─────────────────────────────────────────────────────────────────┘
 ```
+<p align="center"><img src="diagrams/software_hardware_mapping_fig01.svg" alt="software_hardware_mapping figure 1" /></p>
+
 
 
 ## 第二层映射：Block → SM 内部的资源分配
@@ -117,6 +155,8 @@ GPU 芯片 (如 A100) 有 108 个 SM。
 │    Warp Scheduler 下一个周期就可以开始发射指令                       │
 └──────────────────────────────────────────────────────────────────┘
 ```
+<p align="center"><img src="diagrams/software_hardware_mapping_fig02.svg" alt="software_hardware_mapping figure 2" /></p>
+
 
 
 ## 第三层映射：Warp → 指令执行 (Warp Scheduler 的每周期行为)
@@ -210,6 +250,8 @@ SM 0 的 PB 0 的 Warp Scheduler 管理 Warp 0 和 Warp 4。
 │  然后: 下一个周期, 重复 Step A-D                                   │
 └──────────────────────────────────────────────────────────────────┘
 ```
+<p align="center"><img src="diagrams/software_hardware_mapping_fig03.svg" alt="software_hardware_mapping figure 3" /></p>
+
 
 
 ## 第四层映射：Thread → 数据 (threadIdx 如何决定内存地址)
@@ -258,6 +300,8 @@ SM 0 的 PB 0 的 Warp Scheduler 管理 Warp 0 和 Warp 4。
       同一 Warp 的 threadIdx.x 连续 → row 连续 → B[k][row] 不连续!
       → 不合并 ✗ → 这就是为什么 x 必须对应列方向!
 ```
+<p align="center"><img src="diagrams/software_hardware_mapping_fig04.svg" alt="software_hardware_mapping figure 4" /></p>
+
 
 
 ## Block 内多个 Warp 的并发行为
@@ -337,6 +381,8 @@ SM 0 检测到 Block 0 完成:
     → 总计 ~50-100 cycle 的"换班"时间
     → 如果每个 Block 执行 ~10,000 cycle, 这 100 cycle 的开销 = 1%
 ```
+<p align="center"><img src="diagrams/software_hardware_mapping_fig05.svg" alt="software_hardware_mapping figure 5" /></p>
+
 
 
 ## 多 Block 在同一 SM 上的资源共享
@@ -369,6 +415,8 @@ SM 0 上同时有 Block 0 和 Block 108 (本例中, SM 0 分到了 2 个 Block):
 │  └── blockIdx: 不同 Block 有不同的 blockIdx 值                  │
 └──────────────────────────────────────────────────────────────┘
 ```
+<p align="center"><img src="diagrams/software_hardware_mapping_fig06.svg" alt="software_hardware_mapping figure 6" /></p>
+
 
 
 ## 完整的软硬件映射对照表
@@ -409,3 +457,5 @@ SM 0 上同时有 Block 0 和 Block 108 (本例中, SM 0 分到了 2 个 Block):
 │ cudaDeviceSynchronize│ CPU 等待 GPU Command Buffer 的所有命令完成     │
 └─────────────────────┴────────────────────────────────────────────────┘
 ```
+<p align="center"><img src="diagrams/software_hardware_mapping_fig07.svg" alt="software_hardware_mapping figure 7" /></p>
+

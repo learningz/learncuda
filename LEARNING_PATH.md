@@ -8,6 +8,31 @@
 其他文件什么时候用：
 - [`theory/`](./theory/) = 深度参考手册，tutorial 中遇到想深入的地方再翻
 - [`DEBUG_AND_OPTIMIZE.md`](./DEBUG_AND_OPTIMIZE.md) = 代码出错或性能不好时翻
+
+## GPU 架构兼容性
+
+| 模块 | Volta (sm_70) | Turing (sm_75) | Ampere (sm_80) | Hopper (sm_90) | 说明 |
+|------|:---:|:---:|:---:|:---:|------|
+| 01-03 (基础) | ✓ | ✓ | ✓ | ✓ | 纯 CUDA Core，无特殊要求 |
+| 04_pytorch_extension | ✓ | ✓ | ✓ | ✓ | 需要 PyTorch |
+| 05_bank_conflict | ✓ | ✓ | ✓ | ✓ | SMEM 实验，通用 |
+| 06_coalescing | ✓ | ✓ | ✓ | ✓ | 合并访问实验，通用 |
+| 07_softmax | ✓ | ✓ | ✓ | ✓ | 纯 CUDA Core |
+| 08_ncu_profiling | ✓ | ✓ | ✓ | ✓ | 需要 ncu 工具 |
+| 09_register_tiling | ✓ | ✓ | ✓ | ✓ | 纯 CUDA Core 寄存器优化 |
+| 10_fused_kernel | ✓ | ✓ | ✓ | ✓ | 纯 CUDA Core |
+| 11_warp_divergence | ✓ | ✓ | ✓ | ✓ | 纯 CUDA Core |
+| 12_layernorm_project | ✓ | ✓ | ✓ | ✓ | 需要 PyTorch |
+| 13_flash_attention | ✓ | ✓ | ✓ | ✓ | 纯 CUDA Core (简化版) |
+| 14_im2col_conv | ✓ | ✓ | ✓ | ✓ | 纯 CUDA Core |
+| **15_wmma_gemm** | **✓** | **✓** | **✓** | **✓** | **至少 Volta (第一代 TC)** |
+| 16_streams | ✓ | ✓ | ✓ | ✓ | CUDA Stream，通用 |
+| **17_mixed_precision BF16** | **✗** | **✗** | **✓** | **✓** | **BF16 需要 Ampere+ (sm_80)** |
+| theory/exercises WMMA 练习 | ✓ | ✓ | ✓ | ✓ | 至少 Volta |
+| theory/exercises TF32 练习 | ✗ | ✗ | ✓ | ✓ | TF32 需要 Ampere+ |
+
+> **注意**: `17_mixed_precision` 中的 BF16 部分和 `theory/exercises/ch06_ex2_tf32.cu` 需要 Ampere+，
+> 其余所有代码都能在 Volta 及以上的 GPU 上编译运行。
 - [`EXERCISE_ANSWERS.md`](./EXERCISE_ANSWERS.md) = 练习题卡住时翻
 
 
@@ -87,7 +112,7 @@
 ## 文件结构
 
 ```
-leanCuda/
+leanCuda/ → 实际目录名为 learnCuda/
 ├── README.md ............................ 项目入口 (GitHub 首页)
 ├── tutorial.md .......................... ⭐ 主线教程 (从零到算子开发)
 ├── LEARNING_PATH.md ..................... 本文件 (学习路线)
@@ -127,10 +152,16 @@ leanCuda/
 │   ├── streams.cu ....................... 3 个实验: 多Stream/Pinned Memory/Event计时
 │   └── streams.md ....................... 异步执行原理 + 在 DL 框架中的应用
 │
+│ ── 调试练习 ──
+├── debug_exercises/ ..................... ⭐ 3 个有 bug 的程序 (配合 DEBUG_AND_OPTIMIZE.md)
+│   ├── bug1_vector_add.cu ............... cudaMemcpy 方向写反
+│   ├── bug2_reduce.cu ................... __syncthreads 缺失
+│   └── bug3_softmax.cu .................. exp 溢出 (数值稳定性)
+│
 │ ── 理论教程 (每章末尾有练习题) ──
 └── theory/
-    ├── 00_prerequisites.md .............. ⭐⭐ 术语与概念参考
-    ├── 01_gpu_architecture.md ........... ⭐⭐~⭐⭐⭐ GPU 硬件架构
+    ├── 00_prerequisites.md .............. ⭐⭐ 术语与概念参考 [自检×3]
+    ├── 01_gpu_architecture.md ........... ⭐⭐~⭐⭐⭐ GPU 硬件架构 [自检×3]
     ├── 02_cuda_programming_model.md ..... ⭐⭐~⭐⭐⭐ CUDA 编程模型 [练习×3]
     ├── 03_memory_hierarchy.md ........... ⭐⭐~⭐⭐⭐ 内存层级与优化 [练习×3]
     ├── 04_warp_and_sync.md .............. ⭐⭐~⭐⭐⭐ Warp 与同步 [练习×3]
@@ -141,3 +172,29 @@ leanCuda/
     ├── software_hardware_mapping.md ..... ⭐⭐ Grid/Block/Warp 到 SM/PB/Core 的完整映射
     └── appendix_hardware.md ............. ⭐⭐⭐ 半导体物理 + 封装技术 + 互连
 ```
+
+
+## 学完之后，去哪里？
+
+完成本教程后，你已经有能力手写 CUDA kernel 并接入 PyTorch。下一步可以：
+
+**广度方向 (工程实践)**
+- 研究 [CUTLASS](https://github.com/NVIDIA/cutlass) 的 GEMM 实现，理解 warp-level tiling 和 pipeline
+- 阅读 [FlashAttention 官方实现](https://github.com/Dao-AILab/flash-attention)，对比你写的简化版
+- 给 PyTorch 贡献算子 (`torch.utils.cpp_extension`)
+
+**深度方向 (硬件理解)**
+- 阅读 NVIDIA [白皮书](https://docs.nvidia.com/cuda/) (PTX ISA, CUDA C++ Programming Guide)
+- 研究 [RasterGrid](https://github.com/nvidia/cutlass/blob/main/media/docs/efficient_gemm.md) 和 CUTLASS 的 swizzle 模式
+- 用 ncu 分析 cuBLAS kernel，和自己写的做对比
+
+**前沿方向**
+- Hopper GPU 的新特性: TMA, FP8 Tensor Core, Thread Block Cluster
+- 用 Triton 写 kernel (Python DSL, 自动调优)
+- 关注 FlashAttention-3, FlexAttention 等最新论文
+
+**社区资源**
+- [NVIDIA Technical Blog](https://developer.nvidia.com/blog/)
+- [CUDA MODE Discord](https://discord.gg/cuda-mode) (英文社区, 高手很多)
+- [Bilibili — CUDA 相关教程](https://www.bilibili.com/) (中文视频教程)
+- [Triton 文档](https://triton-lang.org/) (下一代 GPU 编程模型)

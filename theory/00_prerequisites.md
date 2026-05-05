@@ -1,14 +1,57 @@
 # 第零章：术语与概念参考
 
-**读完你能做什么**: 理解后续所有章节用到的术语和概念，不会被专业名词卡住。
-**你需要先知道什么**: 完成了 [`tutorial.md`](../tutorial.md) Part 1 的动手练习，或有基本的 CUDA 编程经验。
 **难度**: ⭐⭐ 进阶 (术语查阅) / ⭐⭐⭐ 专家 (深入理解)
+**前置知识**: 完成了 [`tutorial.md`](../tutorial.md) Part 1 的动手练习，或有基本的 CUDA 编程经验。
+**读完你能做什么**: 理解后续所有章节用到的术语和概念，不会被专业名词卡住。
 
 > **给新手的建议**: 不需要从头到尾读完本章。推荐的用法是：
 > 1. 先扫一遍 0.7 (GPU 专有术语) 和 0.12 (术语索引)，建立印象
 > 2. 读后续章节遇到不懂的术语时回来查
 > 3. 0.3-0.6 的计算机基础知识在你觉得"为什么是这样"的时候再深入
 > 4. 半导体物理和数字逻辑见 `appendix_hardware.md` (可选)
+
+
+## 0.1 半导体物理基础
+
+半导体和晶体管是现代芯片的物理基础。以下概念在讨论 GPU 功耗、工艺、频率时会出现：
+
+```
+MOSFET:   Metal-Oxide-Semiconductor Field-Effect Transistor
+          金属氧化物半导体场效应管 — 芯片中最基本的开关元件
+          通过给 Gate (栅极) 加电压，控制 Source 和 Drain 之间是否导通
+
+FinFET:   Fin Field-Effect Transistor, 鳍式场效应管
+          22nm 以下工艺的标准晶体管结构
+          栅极包裹硅"鳍片"的三面 → 更好的静电控制 → 更低的漏电
+
+TDP:      Thermal Design Power, 热设计功耗
+          GPU 在典型负载下的最大散热功率 (不是峰值功耗)
+          例如 A100 TDP = 400W, RTX 4090 TDP = 450W
+```
+
+> 深入阅读: `appendix_hardware.md` A.1 节 (半导体与晶体管)、工艺节点、功耗分析
+
+
+## 0.2 微架构基础
+
+CPU 和 GPU 内部的计算单元和指令执行机制：
+
+```
+ALU:      Arithmetic Logic Unit, 算术逻辑单元
+          执行加减乘除、位运算等基本计算
+          GPU 的一个 SM 内有 64 个 FP32 ALU (CUDA Core)
+          另配 SFU (Special Function Unit) 执行 sin/cos/exp/rcp
+
+Pipeline: 流水线, 将一条指令的执行过程拆成多个阶段 (取指→译码→执行→写回)
+          不同指令的不同阶段可以重叠 → 每周期完成一条指令
+          GPU 的流水线更深, 但通过多 Warp 交替隐藏延迟
+
+ILP:      Instruction-Level Parallelism, 指令级并行
+          在一个线程内同时发射多条无依赖的指令
+          Volta+ GPU 支持双发射: 每周期 1 条 FP32 + 1 条 INT 指令
+```
+
+> 深入阅读: `appendix_hardware.md` A.2 节 (数字逻辑、时钟、流水线)
 
 
 ## 0.3 存储器层级 (Memory Hierarchy)
@@ -112,6 +155,8 @@ DRAM 的内部组织:
   如果访问不同行 (Row Buffer Conflict): PRECHARGE + ACTIVATE + READ ~40ns
   → 这就是 "Row Conflict" 延迟的来源
 ```
+<p align="center"><img src="diagrams/00_prerequisites_fig01.svg" alt="00_prerequisites figure 1" /></p>
+
 
 ### Cache 的工作原理
 
@@ -207,6 +252,8 @@ GPU 的页表:
     → 通知 CPU Driver → 页面迁移 → 更新 Page Table → 重试
     整个过程 ~20-50 μs (非常慢!)
 ```
+<p align="center"><img src="diagrams/00_prerequisites_fig02.svg" alt="00_prerequisites figure 2" /></p>
+
 
 
 ## 0.4 总线与互联 (Buses and Interconnect)
@@ -255,6 +302,8 @@ DMA (Direct Memory Access):
   CE1: Device → Host (D2H 方向)
   它们可以和 Compute Engine 同时工作 → 传输和计算重叠
 ```
+<p align="center"><img src="diagrams/00_prerequisites_fig03.svg" alt="00_prerequisites figure 3" /></p>
+
 
 ### NVLink — GPU 间高速互联
 
@@ -296,6 +345,8 @@ GPU Direct:
   
   这些技术的核心: 绕过 CPU, 减少数据搬运延迟
 ```
+<p align="center"><img src="diagrams/00_prerequisites_fig04.svg" alt="00_prerequisites figure 4" /></p>
+
 
 
 ## 0.5 处理器微架构基础
@@ -320,6 +371,9 @@ ISA (Instruction Set Architecture):
     具体 GPU 架构的真实机器码。
     sm_70 (Volta) 的 SASS 和 sm_80 (Ampere) 不同。
     NVIDIA 不公开 SASS 的完整规范, 但可以反汇编查看。
+
+    → 完整阅读手册: [`theory/sass_guide.md`](./sass_guide.md)
+      涵盖指令格式、操作数类型、常见指令族速查、SASS→CUDA 映射示例
 
 微架构 (Microarchitecture):
   ISA 的具体硬件实现方式。
@@ -565,6 +619,8 @@ nvcc 编译流程:
   fatbinary: 将多个架构的 cubin 和 PTX 打包在一起。
   运行时: 选择匹配的 cubin, 或 JIT 编译 PTX。
 ```
+<p align="center"><img src="diagrams/00_prerequisites_fig05.svg" alt="00_prerequisites figure 5" /></p>
+
 
 
 ## 0.9 浮点数与数值表示
@@ -841,6 +897,8 @@ Warp                   32 线程的执行单位                            0.7
 Warp Divergence        同一 Warp 内线程走不同分支                    Ch4
 WMMA                   Warp Matrix Multiply-Accumulate API          Ch6
 ```
+<p align="center"><img src="diagrams/00_prerequisites_fig06.svg" alt="00_prerequisites figure 6" /></p>
+
 
 
 ## 0.13 本章总结
@@ -1005,3 +1063,73 @@ GPU "CUDA Core": 一个浮点计算管道
   GPU 总 ALU: 108 × 64 = 6912 → 大规模并行简单运算
   CPU 总 ALU: 24 × 8 = 192 → 少量但极其灵活的运算
 ```
+
+
+## 0.15 自检题
+
+### 题 1: 存储层级推理 [难度: ⭐]
+
+```
+A100 的 HBM 带宽 ~2TB/s，容量 80GB。
+L2 Cache ~40MB，带宽 ~10TB/s。
+
+如果有一个 kernel 反复读写 32MB 的数据：
+  - 这些数据能全部放进 L2 吗？
+  - 每轮迭代都要从 HBM 搬运吗？
+  - 这会影响 kernel 是 Memory Bound 还是 Compute Bound 吗？
+```
+
+<details>
+<summary>答案</summary>
+
+32MB < 40MB L2，能全部放进 L2。第一轮从 HBM 搬运，后续都可以命中 L2。
+L2 带宽是 HBM 的 ~5×，同样的 kernel 命中 L2 后算术强度要求降低 → 可能从
+Memory Bound 变为 Compute Bound。这就是为什么 L2-resident 数据对性能影响巨大。
+</details>
+
+### 题 2: 延迟隐藏机制 [难度: ⭐⭐]
+
+```
+一个 SM 上跑了 8 个 Warp（256 线程），kernel 是纯向量加法。
+
+单次全局内存加载延迟 = 500 cycles，每条计算指令延迟 = 4 cycles。
+向量加法的计算指令只有 ~5 条（索引计算 + 加载 a + 加载 b + 加法 + 存储）。
+
+如果 8 个 Warp 全部在等待 HBM 数据：
+  - SM 上还有能执行的 Warp 吗？
+  - 能完全隐藏延迟吗？
+  - 需要大约多少 Warp 才能完全隐藏一次 HBM 加载的延迟？
+```
+
+<details>
+<summary>答案</summary>
+
+8 个 Warp × 5 条指令 = 40 cycles 的有用工作，但 HBM 延迟 500 cycles。
+所以 8 个 Warp 全部 stall 后，SM 空闲 ~460 cycles，无法完全隐藏延迟。
+
+需要约 500/5 = 100 个 Warp（即 ~13 个 Block，每 Block 256 线程）才能让
+计算单元在任一时刻都有活干。但即使延迟完全隐藏，向量加法的瓶颈仍是带宽
+（Memory Bound），不是延迟。
+</details>
+
+### 题 3: 浮点格式选择 [难度: ⭐⭐]
+
+```
+场景分析：以下每种情况应该用 FP16、BF16 还是 FP32？
+
+A. 训练一个 7B 参数的 LLM，在 A100 上，需担心梯度下溢
+B. 推理一个图像分类模型（ResNet-50），在 T4 GPU 上部署
+C. 计算 LayerNorm 的均值和方差（内部计算）
+D. 存储模型权重的优化器状态（Adam 的 m 和 v）
+E. 在 H100 上训练，不想维护 Loss Scaling 代码
+```
+
+<details>
+<summary>答案</summary>
+
+A. BF16 — A100 支持，8 bit 指数范围大，不需要 Loss Scaling
+B. FP16 — T4 (Turing) 不支持 BF16，FP16 推理精度足够
+C. FP32 — LayerNorm 内部归约需要高精度避免数值误差累积
+D. FP32 — 优化器状态需要全精度，否则小更新丢失（"Master Weights" 的核心）
+E. BF16 — H100 支持，不需要 Loss Scaling，训练更稳定
+</details>

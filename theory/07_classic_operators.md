@@ -271,7 +271,52 @@ __global__ void layernorm_fwd(
     }
     
     // 并行合并 Welford 统计量 (非平凡!)
-    // Welford 合并公式:
+    //
+    // Welford 合并公式的推导:
+    //
+    // 问题: 线程 A 处理了 3 个元素 [1, 5, 3], 得到 (n_a=3, mean_a=3, M2_a=8)
+    //       线程 B 处理了 1 个元素 [7],     得到 (n_b=1, mean_b=7, M2_b=0)
+    //       如何合并得到整体的 mean 和 M2, 而不用重新遍历原始数据?
+    //
+    // Step 1: 合并 mean (加权平均, 直观)
+    //   mean_ab = (n_a * mean_a + n_b * mean_b) / (n_a + n_b)
+    //          = (3*3 + 1*7) / 4 = 4
+    //
+    // Step 2: 合并 M2 (平方偏差和, 需要修正)
+    //   回顾 M2 的含义: M2 = Σ(x_i - mean)², 即每个元素到当前组 mean 的平方距离之和
+    //
+    //   如果简单相加: M2_a + M2_b = 8 + 0 = 8
+    //   但真实值: 每个 x 到新 mean=4 的距离平方和
+    //     x=[1,5,3]: (1-4)²=9, (5-4)²=1, (3-4)²=1 → Σ=11
+    //     x=[7]:     (7-4)²=9                         → Σ=9
+    //     总和 = 20, 不是 8!
+    //
+    //   为什么 M2_a + M2_b ≠ 真实的 M2_ab?
+    //     因为 M2_a 是到旧 mean_a=3 的距离, 而 M2_ab 是到新 mean_ab=4 的距离。
+    //     需要把每组的旧 M2 "平移"到新 mean。
+    //
+    // Step 3: 平移公式 (平行轴定理)
+    //   对于组 A: Σ(x_i - mean_ab)² = Σ(x_i - mean_a)² + n_a*(mean_a - mean_ab)²
+    //                                = M2_a + n_a*(mean_a - mean_ab)²
+    //   对于组 B: 同理 = M2_b + n_b*(mean_b - mean_ab)²
+    //
+    //   令 delta = mean_b - mean_a (两组旧 mean 的差)
+    //   则: mean_a - mean_ab = mean_a - (n_a*mean_a + n_b*mean_b)/(n_a+n_b)
+    //                         = (n_a*mean_a + n_b*mean_a - n_a*mean_a - n_b*mean_b)/(n_a+n_b)
+    //                         = -n_b*(mean_b - mean_a)/(n_a+n_b)
+    //                         = -n_b*delta/(n_a+n_b)
+    //
+    //   同理: mean_b - mean_ab = n_a*delta/(n_a+n_b)
+    //
+    //   代入:
+    //   M2_ab = [M2_a + n_a*(-n_b*delta/(n_a+n_b))²] + [M2_b + n_b*(n_a*delta/(n_a+n_b))²]
+    //         = M2_a + M2_b + [n_a*n_b² + n_b*n_a²]*delta²/(n_a+n_b)²
+    //         = M2_a + M2_b + n_a*n_b*(n_a+n_b)*delta²/(n_a+n_b)²
+    //         = M2_a + M2_b + delta² * n_a * n_b / (n_a + n_b)
+    //
+    // 验证: M2_ab = 8 + 0 + (7-3)² * 3*1 / 4 = 8 + 16*3/4 = 8 + 12 = 20 ✓
+    //
+    // 合并公式:
     // mean_combined = (count_a * mean_a + count_b * mean_b) / (count_a + count_b)
     // M2_combined = M2_a + M2_b + delta² * count_a * count_b / (count_a + count_b)
     // 其中 delta = mean_b - mean_a
@@ -443,6 +488,8 @@ FlashAttention-3 (Hopper):
 - WGMMA (Warp Group MMA) 指令
 - 异步 softmax + MMA 流水线
 ```
+<p align="center"><img src="diagrams/07_classic_operators_fig01.svg" alt="07_classic_operators figure 1" /></p>
+
 
 ### 为什么 FlashAttention 这么重要？
 
@@ -490,6 +537,8 @@ Tensor Core      17.0              85%
 +Swizzle+Warp    18.5              92%
 cuBLAS           ~19.5             100%
 ```
+<p align="center"><img src="diagrams/07_classic_operators_fig02.svg" alt="07_classic_operators figure 2" /></p>
+
 
 ### Level 1→2: 合并访问 + Shared Memory Tiling
 
@@ -575,22 +624,58 @@ Tensor Core 版本:
 ### 为什么反向比前向更难
 
 ```
-前向:
-  O = softmax(QK^T/√d) × V
-  需要保存: O, logsumexp (l), max (m) → O(Nd + 2N) 显存
+前向回顾:
+  S  = QK^T / √d                          ← [N, N] 的分数矩阵
+  P  = softmax(S)                           ← [N, N] 逐行归一化 (P[i,:] 是概率分布)
+  O  = P × V                                ← [N, d] 加权求和
 
-反向:
-  给定 dO (loss 对 O 的梯度), 求 dQ, dK, dV。
+  因为 P 是 O(N²), FlashAttention 前向不显式存储 P。
+  而是对每行 i 保存两个标量:
+    m_i  = max(S[i,:])                      ← 当前行的最大值 (用于数值稳定)
+    lse_i = log(Σ_j exp(S[i,j] - m_i)) + m_i  ← log-sum-exp ("log 归一化因子")
+  
+  有了它们, 反向时你可以重建 P 的任意元素:
+    P[i,j] = exp(S[i,j] - lse_i)            ← 不需要整个 P 存在显存中!
+  
+  前向只存 O(N×d + 2N) → 比存 P 的 O(N²) 少了 ~N 倍显存。
+  代价是: 反向需要重新计算 S 和 P 的每一小块。
 
-  dV = P^T × dO           ← P = softmax(QK^T/√d)
-  dP = dO × V^T
-  dS = P ⊙ (dP - rowsum(dP ⊙ P))   ← Softmax 反向, ⊙ 是 Hadamard 积
-  dQ = dS × K / √d
-  dK = dS^T × Q / √d
+反向的数学推导 (从 dO 到 dQ, dK, dV):
 
-问题: P (N×N 的 attention 矩阵) 在前向没有保存! (FlashAttention 的核心就是不存 P)
-  → 反向需要重新计算 P = softmax(QK^T/√d)
-  → 用前向保存的 logsumexp 来重建: P[i,j] = exp(S[i,j] - lse[i])
+  给定 dO (loss 对 O 的梯度, shape [N,d])。
+
+  Step 1 — dV: O = P × V, 所以 dV = P^T × dO
+    链式法则: ∂L/∂V = ∂L/∂O × ∂O/∂V, 而 ∂O/∂V 的 Jacobian 恰好是 P^T。
+    含义: dO 按 attention 权重"分配"回 V 的每一行。
+
+  Step 2 — dP: O = P × V, 所以 dP = dO × V^T
+    链式法则: ∂L/∂P = ∂L/∂O × ∂O/∂P = dO × V^T。
+    含义: dO 和 V 做外积, 得到每个 attention 权重对 loss 的敏感程度。
+
+  Step 3 — dS (Softmax 反向, 最复杂的一步):
+    P = softmax(S) 的反向公式:
+      dP_i/dS_j = P_i * (δ_{ij} - P_j)    ← δ 是 Kronecker delta (i=j 时为 1)
+    
+    所以:
+      dS_i = Σ_j dP_j × (∂P_j/∂S_i) = P_i × (dP_i - Σ_j P_j × dP_j)
+    
+    写成向量形式:
+      dS = P ⊙ (dP - rowsum(dP ⊙ P))     ← ⊙ 是逐元素乘法 (Hadamard)
+    
+    含义: 每个位置的梯度 = 该位置的 attention 权重 × (直接梯度 - 行内加权平均梯度)
+    行内加权平均的作用: 因为 softmax 有"总和为 1"的约束, 每个元素的变化会影响整行的分布。
+
+  Step 4 — dQ 和 dK: S = QK^T / √d, 所以
+    dQ = dS × K / √d   (dS 对 Q 的梯度 = dS × K, 因为 S=QK^T → ∂S/∂Q = K^T)
+    dK = dS^T × Q / √d  (dS 对 K 的梯度 = dS^T × Q)
+
+  总结: 反向需要 4 次矩阵乘法 (dP, dV, dQ, dK) + softmax 反向的 elementwise 操作。
+  大部分计算量和前向一样是 O(N²d), 但常数因子 ~2-2.5×。
+
+FlashAttention 反向的额外挑战:
+  1. 前向没存 P → 需要重新计算 S 和 P (但可以用 lse_i 重建)
+  2. dQ 和 dK 需要对多个块累加 (因为 Q 和 K 被分成多块, 每块产生部分梯度)
+  3. 块的粒度必须满足 SRAM 大小限制, 而且前向和反向的块划分需要一致
 ```
 
 ### FlashAttention-2 反向的分块算法
@@ -612,15 +697,126 @@ Tensor Core 版本:
 每个内循环有 5 次 GEMM + 若干 elementwise!
   → 反向 ~2-2.5× 前向的计算量
   → 但依然只需 O(N) 额外显存 (不存 P)
-  
-FlashAttention-2 反向的关键优化:
-  1. dQ 需要原子加法 (多个 K 块贡献到同一 dQ 块)
-     → 在 Shared Memory 中累加, 最后一次性写回
+```
+
+**逐步骤理解 (以一个 (i,j) 块为例)**：
+
+```
+前向已经计算过并保存了:
+  O_i (输出块), lse_i (每行 log-sum-exp), m_i (每行 max)
+
+现在反向拿到 dO_i (loss 对 O_i 的梯度), 需要计算对 Q_i, K_j, V_j 的梯度。
+
+Step 1: 重新算 S_ij = Q_i × K_j^T / √d
+  → 这和前向一样, 是一次小矩阵乘, 结果 [Br, Bc]
+  → 为什么重新算? 因为前向没存 S (太大了), 只存了 lse 的摘要
+  → Q_i 和 K_j 需要从 HBM 重新加载
+
+Step 2: 重建 attention 权重 P_ij = exp(S_ij - lse_i)
+  → 前向保存的 lse_i 包含了归一化信息
+  → P_ij[i,j] = exp(S_ij[i,j] - lse_i[i]) = exp(S_ij[i,j]) / Σ_k exp(S_ij[i,k])
+  → 这恢复的就是前向 softmax(QK^T/√d) 的结果, 但只在 SRAM 中, 不写回 HBM
+
+Step 3: dV_j += P_ij^T × dO_i
+  → dO_i: [Br, d], P_ij^T: [Bc, Br], 结果: [Bc, d]
+  → 含义: 把 dO_i 的每一列用 attention 权重"分配"回 V_j 的对应行
+  → += 因为 V_j 会被多个不同的 Q 块 (不同 i) 用到 → 每个 (i,j) 累加一部分贡献
+  → 所有 i 遍历完后, dV_j 的完整梯度才算完
+
+Step 4: dP_ij = dO_i × V_j^T
+  → dO_i: [Br, d], V_j^T: [d, Bc], 结果: [Br, Bc]
+  → 含义: dO_i 和 V_j 做外积, 每个位置 (p,q) 是 dO 的第 p 行和 V 的第 q 行的点积
+  → 这个矩阵的大小 [Br, Bc] 和前向的 S_ij 一样大
+
+Step 5: Softmax 反向 (核心公式)
+  dS_ij = P_ij ⊙ (dP_ij - D_i)
+  → 其中 D_i = rowsum(dO_i ⊙ O_i) 是预计算好的 [Br, 1] 向量
+  → D_i 的含义: 这是 softmax 反向的"均值修正项"
+  → ⊙ 是逐元素乘法, D_i 会广播到每一列
+  → dS_ij: [Br, Bc], 这就是 loss 对原始分数 S_ij 的梯度
+
+  D_i 的作用 (为什么需要它):
+    Softmax 有个约束: 每行加起来等于 1。
+    所以 dP 中有一部分的"变化"其实是行列别的约束导致的,
+    而不是 Q, K 本身的变化导致的。D_i 把这部分扣除掉。
+    数学上: D_i = Σ_j P_ij × dP_ij (对 j 求和), 就是 dP 在 P 下的加权平均。
+
+Step 6: dQ_i += dS_ij × K_j / √d
+  → S = QK^T/√d, 所以 ∂L/∂Q = ∂L/∂S × ∂S/∂Q = dS × K / √d
+  → 结果: [Br, d] (和 Q_i 同样大小)
+  → += 因为 Q_i 会被每个 K 块 (不同 j) 贡献 → 所有 j 遍历完后才完整
+
+Step 7: dK_j += dS_ij^T × Q_i / √d
+  → 结果: [Bc, d] (和 K_j 同样大小)
+  → += 同理, 每个 Q 块贡献一次
+
+六个步骤都完成后, 沿 K/V 方向继续循环到下一块 j。
+当所有 j 遍历完时, dQ_i 的累加完成 → 可以写回 HBM。
+```
+
+**一个完整的内循环的数据流**:
+
+```
+      dO_i [Br,d]                Q_i [Br,d]               K_j [Bc,d]           V_j [Bc,d]
+          │                         │                        │                    │
+    ┌─────┴────────┐          ┌─────┴─────┐                  │                    │
+    │              │          │           │                  │                    │
+    ▼              ▼          │           │                  │                    │
+  dV += P^T×dO   dP = dO×V^T  │           │                  │                    │
+  ┌───┐          ┌───┐        │           │                  │                    │
+  │   │          │   │        └─────┬─────┘                  │                    │
+  │   │          │   │              │                        │                    │
+  │   │          │   ▼              ▼                        │                    │
+  │   │          │  P_ij = exp(S_ij - lse_i)                 │                    │
+  │   │          │   │   ↑                                    │                    │
+  │   │          │   │   │ S_ij = Q_i × K_j^T / √d            │                    │
+  │   │          │   │   │ ┌────────────────────┘             │                    │
+  │   │          │   │   │ │                                  │                    │
+  │   │          │   ▼   ▼ ▼                                  ▼                    ▼
+  │   │          │  dS = P ⊙ (dP - D_i)          dQ += dS × K / √d    dK += dS^T × Q / √d
+  │   │          │                                 ▲                     ▲
+  │   │          │                                 │                     │
+  └───┴──────────┴─────────────────────────────────┴─────────────────────┘
+
+  所有操作都在 SRAM 中 (Q/K/V/dO 块大小 ≤ SRAM 容量)。
+  唯一的 HBM 读写:
+    读取: Q_i, K_j, V_j, dO_i, lse_i, D_i (每次内循环)
+    写入: dQ_i (外循环 j 结束后), dV_j (内循环 i 结束后), dK_j (外循环 i 结束后)
+```
+
+**FlashAttention-2 反向的关键优化**:
+
+```
+  1. dQ 需要在 Shared Memory 中累加:
+     多个 K 块 (j=1..T_c) 贡献到同一个 dQ_i 块
+     → 在 SMEM 中分配一个 dQ_i 缓冲区, 每次 +=, 所有 j 遍历完后一次写回 HBM
+     → 省了 T_c-1 次 HBM 读写 (因为只有最后一次需要写回)
+     → 但 SMEM 缓冲区占用了 SRAM 空间 → 分块大小 Br/Bc 需要相应调整
+
   2. 外循环遍历 K/V (不是 Q):
-     → K, V 只加载一次到 SMEM, Q 和 dO 在内循环重复加载
-     → 减少全局内存总访问量
+     → K_j, V_j 在外循环加载, 内循环不重载
+     → Q_i 和 dO_i 在内循环重复加载 (每次 j 都重新载入)
+     → 这比反过来 (Q 在外) 减少了总 HBM 访问量, 因为 K/V 通常多于 Q
+
   3. D_i = rowsum(dO_i ⊙ O_i) 预计算:
-     → 单独的 kernel, 避免在反向主循环中重复计算
+     → 这是 softmax 反向的"修正项", 对所有 j 都相同
+     → 单独用一个 kernel 预计算所有 i 的 D_i → O(Nd) 而不是 O(N²d)
+     → 避免在反向主循环的每次迭代中重复计算
+
+  4. 前后块匹配:
+     → 前向用什么样的分块, 反向就必须用同样的分块 (否则 P_ij 对不上)
+     → 前向存的 lse_i 是按前向分块计算的, 反向重建必须用同样的 Q_i 和 K_j
+```
+
+**显存对比**: 
+
+```
+                           前向保存       反向额外分配
+                           ────────       ───────────
+标准 Attention               O(N²+Nd)         O(N²+Nd)
+FlashAttention (前向)        O(Nd)             —
+FlashAttention (反向)         —               O(Nd)
+  → 相比标准方法, 训练一个 N=4096 的 Attention 层可以省 ~500MB 的中间张量
 ```
 
 

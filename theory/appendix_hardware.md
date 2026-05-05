@@ -61,6 +61,44 @@ GAA (Gate-All-Around):
   晶体管越多 → 可以放更多计算单元/寄存器/缓存
   工艺越先进 → 同样面积塞更多晶体管, 且更低功耗
 ```
+<p align="center"><img src="diagrams/appendix_hardware_fig01.svg" alt="appendix_hardware figure 1" /></p>
+
+
+### 代工厂对比 — TSMC vs Intel vs Samsung
+
+```
+工艺节点的命名不再对应实际物理尺寸。不同代工厂同一 "nm" 标签的实际密度差异很大:
+
+TSMC (台积电) — 代工市场领导者:
+  N7 (7nm):  ~65 MTr/mm²  (A100, AMD Zen 3)
+  N5 (5nm):  ~137 MTr/mm² (H100 基于 4N, 是 N5 的变体)
+  N4 (4nm):  ~114 MTr/mm²* (优化版 N5, yield 更好)
+  N3 (3nm):  ~198 MTr/mm² (Blackwell B200)
+  N3P:       ~215 MTr/mm² (预计 2025)
+
+Intel (英特尔) — 改名策略 (Intel 4 = 原 7nm):
+  Intel 10nm: ~100 MTr/mm² (Alder Lake)
+  Intel 7:    ~100 MTr/mm² (Raptor Lake, 实际是 10nm 改进)
+  Intel 4:    ~160 MTr/mm² (Meteor Lake)
+  Intel 3:    ~195 MTr/mm²
+  Intel 18A:  ~230+ MTr/mm² (预计 2025, GAA 类似技术)
+
+Samsung (三星) — 曾经领先, 现在落后:
+  8nm:  ~45 MTr/mm²  (Ampere 消费卡 RTX 3080/3090)
+  5nm:  ~95 MTr/mm²
+  3nm:  ~145 MTr/mm² (GAA 架构, 三星第一家 GAA)
+
+注意: NVIDIA 数据中心 GPU 用 TSMC, 消费卡有时用 Samsung。
+      A100 = TSMC 7nm, RTX 3090 = Samsung 8nm
+      H100 = TSMC 4nm (N4 变体), RTX 4090 = TSMC 4nm
+
+为何不同代工厂的密度差异这么大?
+  1. 命名是营销, 不是物理尺寸
+  2. 晶体管密度取决于: fin/gate pitch × metal pitch × cell height
+     → 每个代工厂的设计规则不同
+  3. 高密度 ≠ 高性能: 高性能库用更大晶体管 (更可靠, 更高频率)
+     同一工艺有高密度库和高性能库两个版本
+```
 
 ### 工艺节点 (Process Node)
 
@@ -88,6 +126,8 @@ GAA (Gate-All-Around):
   A100 的 826 mm² 已经非常接近极限!
   更大的芯片 → Chiplet 方案 (多个小 die 封装在一起, 如 AMD MI300)
 ```
+<p align="center"><img src="diagrams/appendix_hardware_fig02.svg" alt="appendix_hardware figure 2" /></p>
+
 
 ### 功耗 (Power)
 
@@ -105,12 +145,56 @@ GAA (Gate-All-Around):
    关键: 和 V² 成正比! 降压 10% → 功耗降 19%
    这就是为什么 GPU 降频可以大幅省电 (V 和 f 一起降)
 
+   物理直觉 — 电容充放电:
+   每个晶体管驱动一个电容负载 (下一级的 Gate 电容 + 连线电容)。
+   每次 0→1 或 1→0 切换 = 通过电阻给电容充/放电一次。
+   充放电一次消耗的能量: E = ½CV² (电容储能公式)
+   每秒切换 f 次 → P = ½CV² × f
+   考虑到实际切换概率 α: P = α × C × V² × f
+   
+   为什么 V² 是关键项:
+   电压从 1.2V 降到 0.7V → V² 从 1.44 降到 0.49 → 降 66%!
+   → 但电压不能无限降: Gate 阈值电压 ~0.2-0.3V
+   → 降到 ~0.5V 时晶体管就很难可靠开关了 (热噪声干扰)
+
 2. 静态功耗 (Static Power / Leakage): 晶体管关断时的漏电
    P_static ∝ 晶体管数量 × 漏电流
    工艺越先进, 漏电越难控制 (沟道越短, 漏电越大)
    
+   漏电的物理来源:
+   a) 亚阈值漏电 (Subthreshold Leakage):
+      晶体管即使 "关断", 仍有微弱电流 (热电子越过势垒)
+      沟道越短 → 势垒越容易被穿透 → 漏电越大
+   
+   b) 栅极漏电 (Gate Leakage):
+      电子量子隧穿通过 Gate Oxide (SiO₂ 或 High-K 介电层)
+      Gate Oxide 厚度 ~1-2nm → 电子可以直接隧穿!
+      → High-K 介电层 (HfO₂ 等) + 金属栅 (HKMG) 缓解了这个问题
+   
+   c) 结漏电 (Junction Leakage):
+      源/漏 PN 结的反向漏电
+   
+   温度对漏电的影响:
+   漏电流 ∝ e^(T) (指数依赖于温度!)
+   芯片温度从 25°C 升到 85°C → 漏电增加 ~5-10×
+   → 这就是为什么散热不仅影响频率, 还影响功耗本身
+   → 太热 → 漏电更大 → 更热 → 恶性循环 (Thermal Runaway)
+   
    A100 TDP: 400W (SXM4)
    其中静态功耗估计 ~30-50W (取决于温度)
+
+   Gate Capacitance 的物理:
+   Gate 和沟道之间形成平行板电容器:
+   C_gate = ε₀ × ε_r × A / d
+   
+   ε₀: 真空介电常数 (8.85 × 10⁻¹² F/m)
+   ε_r: 相对介电常数 (SiO₂ = 3.9, HfO₂ = 25)
+   A: Gate 面积 (工艺节点越小, A 越小)
+   d: Gate Oxide 厚度 (越小电容越大, 但漏电也越大)
+   
+   为什么不无限缩小 d?
+   隧穿电流 ∝ e^(-d) → d < 1nm 时隧穿电流呈指数增长
+   → 这是摩尔定律放缓的物理原因之一
 
 TDP (Thermal Design Power):
   芯片设计的最大散热功率。不是实际功耗, 而是散热系统需要处理的上限。
@@ -189,7 +273,64 @@ XOR (异或): ~8-12 个晶体管
   用流水线:   批1 洗 → 批1烘 + 批2洗 → 批1叠 + 批2烘 + 批3洗
               每 30min 出一批 (吞吐提高 3×)
 
-GPU 中的流水线:
+### 流水线冒险 (Pipeline Hazards)
+
+```
+流水线不是没有代价的。三种经典的流水线冒险 (Hazards):
+
+1. 数据冒险 (Data Hazard): 后续指令依赖前一条指令的结果
+
+   RAW (Read After Write): 最常见
+     FADD R0, R1, R2   // 写 R0 (Stage 4 才完成)
+     FMUL R3, R0, R4   // 下一条就要读 R0! (Stage 1 就需要)
+     
+     如果 RAW 距离 < 流水线深度 → 需要等待 (Pipeline Stall)
+     或者用数据前递 (Forwarding/Bypassing):
+     前一条 ALU 的输出在 Stage 3 就已有结果,
+     通过旁路 (Bypass) 直接送到下一条的 Stage 1, 不用等写回.
+     → GPU 支持有限的前递 (Warp 间无依赖, 只有同一线程的依赖需要)
+
+   WAR (Write After Read): 在乱序执行中才常见, GPU 是顺序发射 → 不存在
+   WAW (Write After Write): 同上
+
+2. 控制冒险 (Control Hazard): 分支指令
+
+   @P0 BRA target   // 条件分支
+   
+   在分支结果出来之前, 流水线不知道下一条指令在哪.
+   CPU: 分支预测器猜测 → 猜错就冲刷流水线
+   GPU (Pre-Volta): 有谓词寄存器 (P0) → 直接执行两条路径!
+     谓词为真的线程走一条, 谓词为假的线程走另一条
+     → 不需要预测, 但 Divergence 会降低吞吐
+   
+   GPU (Volta+): ITS 下每条线程独立 PC
+     但如果所有线程走同一路径 → 无分支延迟
+     如果线程走到不同路径 → 串行执行两条路径
+
+3. 结构冒险 (Structural Hazard): 硬件资源冲突
+
+   两条指令同时需要同一硬件:
+   例: 两条 LDG 指令同时准备好 → 但只有 4 个 LD/ST Unit
+       → 后一条等前一条发射完才能发射
+   
+   Register File Bank Conflict:
+   两条源操作数在同一个 Register Bank → 各多等 1 周期
+   
+   Shared Memory Bank Conflict:
+   多个线程访问同一 Bank 不同地址 → 串行
+
+编译器 (ptxas) 如何处理冒险:
+  1. 指令调度: 重新排列指令顺序, 让有依赖的指令隔开足够距离
+  2. 寄存器分配: 避免 WAW/RAW 的假依赖
+  3. Stall Count: 计算需要的等待周期数, 编码到 SASS 控制码中
+  4. 双发射: 两条不相关的指令可以从同一 Warp Scheduler 同时发射
+     但这一般针对不同类型 (如 1 ALU + 1 MEM), 不是两条同类指令
+
+GPU 比 CPU 更容易处理冒险:
+  同一 Warp 的线程间没有寄存器依赖 → 不需要前递
+  不同 Warp 完全独立 → 只要切换到另一个 Warp 发射即可
+  → GPU 牺牲单线程延迟换取了极简的冒险处理逻辑
+```
   FP32 FMA 是 4 级流水线:
   Stage 1: 读操作数
   Stage 2: 乘法
@@ -257,6 +398,8 @@ HBM 堆叠:
     带宽: 3350 GB/s
     容量: 80 GB
 ```
+<p align="center"><img src="diagrams/appendix_hardware_fig03.svg" alt="appendix_hardware figure 3" /></p>
+
 
 ### CoWoS 封装
 
@@ -284,6 +427,8 @@ GPU 和 HBM 都放在硅中介层上。
     H100 的 CoWoS 面积更大 (还有额外的 NVLink Die)
     → 良率是关键挑战: 越大越容易有缺陷
 ```
+<p align="center"><img src="diagrams/appendix_hardware_fig04.svg" alt="appendix_hardware figure 4" /></p>
+
 
 ### Chiplet 方案
 
@@ -360,6 +505,8 @@ NVLink 4.0 (H100):
   ↑ 如果两 GPU 有 NVLink, 自动走 NVLink (600 GB/s)
   ↑ 如果没有, 走 PCIe (32 GB/s) → 慢 ~20×
 ```
+<p align="center"><img src="diagrams/appendix_hardware_fig05.svg" alt="appendix_hardware figure 5" /></p>
+
 
 ### PCIe
 

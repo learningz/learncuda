@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="719" height="1274" viewBox="0 0 719 1274">
+<defs>
+  <filter id="shadow" x="-4%" y="-4%" width="108%" height="108%">
+    <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#00000055"/>
+  </filter>
+</defs>
+<rect width="100%" height="100%" rx="10" fill="#1e1e2e"/>
+<defs><marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a6adc8"/></marker></defs>
+<rect x="28.0" y="70.0" width="285.6" height="273.0" rx="10" fill="#89b4fa18" stroke="#89b4fa" stroke-width="1.5" opacity="1.0" filter="url(#shadow)"/>
+<text x="40.0" y="86.0" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#a6e3a1;font-weight:600;opacity:1.0">Python (PyTorch / JAX / etc.)</text>
+<text x="321.6" y="86.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:11.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">← 用户代码</text>
+<line x1="32.0" y1="115.5" x2="309.6" y2="115.5" stroke="#89b4fa" stroke-width="0.5" stroke-dasharray="4 2"/>
+<text x="40.0" y="131.5" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#89b4fa;font-weight:600;opacity:1.0">CUDA Libraries</text>
+<text x="40.0" y="149.5" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">cuBLAS, cuDNN, cuFFT, NCCL, etc</text>
+<line x1="32.0" y1="161.0" x2="309.6" y2="161.0" stroke="#89b4fa" stroke-width="0.5" stroke-dasharray="4 2"/>
+<text x="40.0" y="177.0" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#89b4fa;font-weight:600;opacity:1.0">CUDA Runtime API (libcudart)</text>
+<text x="321.6" y="177.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:11.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">← 高性能数学库</text>
+<line x1="32.0" y1="206.5" x2="309.6" y2="206.5" stroke="#89b4fa" stroke-width="0.5" stroke-dasharray="4 2"/>
+<text x="40.0" y="222.5" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#89b4fa;font-weight:600;opacity:1.0">CUDA Driver API (libcuda)</text>
+<line x1="32.0" y1="252.0" x2="309.6" y2="252.0" stroke="#89b4fa" stroke-width="0.5" stroke-dasharray="4 2"/>
+<text x="40.0" y="268.0" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cba6f7;font-weight:600;opacity:1.0">Kernel Mode Driver (nvidia.ko)</text>
+<text x="321.6" y="268.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:11.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">← cudaMalloc, cudaMemcpy, &lt;&lt;&lt;&gt;&gt;&gt;</text>
+<line x1="32.0" y1="297.5" x2="309.6" y2="297.5" stroke="#89b4fa" stroke-width="0.5" stroke-dasharray="4 2"/>
+<text x="40.0" y="313.5" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#89b4fa;font-weight:600;opacity:1.0">GPU Hardware</text>
+<text x="32.0" y="40.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">从上到下的软件层级:</text>
+<text x="32.0" y="397.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">CUDA Runtime API vs Driver API:</text>
+<text x="32.0" y="418.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">Runtime: 更高层, 更易用。大多数人用的是这个。</text>
+<text x="32.0" y="439.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">cudaMalloc, cudaMemcpy, kernel&lt;&lt;&lt;&gt;&gt;&gt;, cudaDeviceSynchronize</text>
+<text x="32.0" y="460.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">自动管理 Context (每个 GPU 一个默认 Context)。</text>
+<text x="32.0" y="502.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">Driver: 更底层, 更灵活。用于需要精确控制的场景。</text>
+<text x="32.0" y="523.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">cuCtxCreate, cuModuleLoad, cuLaunchKernel</text>
+<text x="32.0" y="544.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">需要手动管理 Context、Module、Function。</text>
+<text x="32.0" y="565.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">PyTorch/TensorFlow 的后端用 Driver API。</text>
+<text x="32.0" y="607.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">CUDA Context:</text>
+<text x="32.0" y="628.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">类似 CPU 的 &quot;进程&quot;。封装了:</text>
+<text x="32.0" y="649.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">- GPU 上的地址空间 (Page Table)</text>
+<text x="32.0" y="670.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">- 已加载的 Module (kernel 二进制)</text>
+<text x="32.0" y="691.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">- 已分配的内存</text>
+<text x="32.0" y="712.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">- 已创建的 Stream 和 Event</text>
+<text x="32.0" y="733.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">一个 GPU 可以有多个 Context, 但同一时刻只有一个 active。</text>
+<text x="32.0" y="754.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">Context Switch 有开销 (~μs级)。</text>
+<text x="32.0" y="796.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">CUDA Module:</text>
+<text x="32.0" y="817.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">一个编译好的 GPU 二进制 (cubin 或 fatbinary)。</text>
+<text x="32.0" y="838.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">包含一个或多个 kernel 函数。</text>
+<text x="32.0" y="880.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">CUDA Stream:</text>
+<text x="32.0" y="901.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">GPU 上命令的有序队列。同一 Stream 内顺序执行, 不同 Stream 可并发。</text>
+<text x="32.0" y="922.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">底层: 一个 Ring Buffer, CPU 端写入, GPU 端读取。</text>
+<text x="32.0" y="964.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">CUDA Event:</text>
+<text x="32.0" y="985.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">Stream 中的时间标记。可以用于:</text>
+<text x="32.0" y="1006.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">- 精确计时 (cudaEventElapsedTime)</text>
+<text x="32.0" y="1027.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">- 跨 Stream 同步 (cudaStreamWaitEvent)</text>
+<text x="32.0" y="1048.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">- 查询操作是否完成 (cudaEventQuery)</text>
+<text x="32.0" y="1090.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">nvcc 编译流程:</text>
+<text x="32.0" y="1111.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">.cu 源码</text>
+<text x="32.0" y="1132.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">nvcc 前端: 分离 host code 和 device code</text>
+<text x="32.0" y="1153.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">Host code → 系统 C++ 编译器 (gcc/clang/MSVC)</text>
+<text x="32.0" y="1174.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">Device code → cicc (CUDA 前端) → PTX → ptxas → SASS (cubin)</text>
+<text x="32.0" y="1216.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">fatbinary: 将多个架构的 cubin 和 PTX 打包在一起。</text>
+<text x="32.0" y="1237.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">运行时: 选择匹配的 cubin, 或 JIT 编译 PTX。</text>
+</svg>

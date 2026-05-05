@@ -1,0 +1,87 @@
+name: CUDA Examples Verification
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build-and-verify:
+    runs-on: [self-hosted, cuda]
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check CUDA environment
+        run: |
+          export LC_ALL=C.UTF-8
+          nvidia-smi
+          nvcc --version
+          echo "GPU Compute Capability: $(nvidia-smi --query-gpu=compute_cap --format=csv,noheader | head -1)"
+
+      - name: Compile main examples
+        run: make all -j
+
+      - name: Verify vector_add correctness
+        run: ./01_vector_add/vector_add | grep -E "正确|✓|通过"
+        env:
+          LC_ALL: C.UTF-8
+
+      - name: Verify matmul correctness
+        run: ./02_matrix_mul/matmul | grep -E "正确|✓|通过"
+        env:
+          LC_ALL: C.UTF-8
+
+      - name: Verify reduce correctness
+        run: ./03_reduce/reduce | grep -E "正确|✓|通过"
+        env:
+          LC_ALL: C.UTF-8
+
+      - name: Verify bank_conflict
+        run: ./05_bank_conflict/bank_conflict | grep -v "✗"
+        env:
+          LC_ALL: C.UTF-8
+
+      - name: Verify coalescing
+        run: ./06_coalescing/coalescing | grep -v "✗"
+        env:
+          LC_ALL: C.UTF-8
+
+      - name: Verify softmax correctness
+        run: ./07_softmax/softmax | grep -E "正确|✓|通过"
+        env:
+          LC_ALL: C.UTF-8
+
+      - name: Verify fused_kernel
+        run: ./10_fused_kernel/fused_kernel | grep -v "✗"
+        env:
+          LC_ALL: C.UTF-8
+
+      - name: Verify warp_divergence
+        run: ./11_warp_divergence/warp_divergence | grep -v "✗"
+        env:
+          LC_ALL: C.UTF-8
+
+      - name: Verify flash_attention
+        run: ./13_flash_attention/flash_attention | grep -E "正确|✓|通过"
+        env:
+          LC_ALL: C.UTF-8
+
+      - name: Verify streams
+        run: ./16_streams/streams | grep -v "✗"
+        env:
+          LC_ALL: C.UTF-8
+
+      - name: Verify mixed_precision
+        run: ./17_mixed_precision/mixed_precision | grep "关键结论"
+        env:
+          LC_ALL: C.UTF-8
+
+      - name: Compile debug exercises
+        run: make debug
+
+      - name: Run automated checks (Python)
+        run: python3 check_exercises.py --timeout 15

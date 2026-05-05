@@ -258,6 +258,8 @@ __global__ void kernel(const float *A, const float *B, float *C) {
 // ─────────────────────────────────────────────────
 // 加载和计算重叠 → 隐藏内存延迟!
 ```
+<p align="center"><img src="diagrams/08_advanced_optimization_fig01.svg" alt="08_advanced_optimization figure 1" /></p>
+
 
 ### cp.async 多阶段流水线 (Ampere+)
 
@@ -395,6 +397,8 @@ Stall Reasons (Warp 停顿原因分布):
   Math Pipe Throttle         计算管道满 → Compute Bound
   MIO Throttle               内存指令队列满 → Memory Bound
 ```
+<p align="center"><img src="diagrams/08_advanced_optimization_fig02.svg" alt="08_advanced_optimization figure 2" /></p>
+
 
 ### 常用 ncu 命令
 
@@ -446,6 +450,8 @@ ncu-ui profile_before.ncu-rep profile_after.ncu-rep
    - Barrier 占主导 → __syncthreads 太多, 考虑减少同步
    - Not Selected 占主导 → 好消息! 说明并行度足够
 ```
+<p align="center"><img src="diagrams/08_advanced_optimization_fig03.svg" alt="08_advanced_optimization figure 3" /></p>
+
 
 
 ## 8.6 性能优化清单 (Checklist)
@@ -832,6 +838,8 @@ CUB 选择参数的自动调优:
   - 向量化宽度: float4 vs float
   这些参数存在 cub::DeviceReducePolicy<T, OffsetT> 的特化中。
 ```
+<p align="center"><img src="diagrams/08_advanced_optimization_fig04.svg" alt="08_advanced_optimization figure 4" /></p>
+
 
 ### CUB DeviceScan 的三遍策略
 
@@ -1042,7 +1050,260 @@ Kernel 内部 (最细粒度):
 ```
 
 
-## 8.15 练习题
+## 8.15 CUDA Graph — 消除 Kernel Launch 开销
+
+### 问题: Launch Overhead
+
+```
+每个 kernel launch 涉及:
+  1. CPU 端: 参数打包、校验
+  2. Driver: 构建 command buffer, 校验参数合法性
+  3. Submit: 把命令提交到 GPU 的推送缓冲区
+  4. GPU: 解析命令, 调度执行
+
+单个 launch 开销: ~5-10μs (CPU 端)
+如果你有 1000+ 个 kernel (如 100 层 × 10 个算子/层):
+  → 10ms 的纯 launch 开销! (vs GPU 计算可能只需 5ms)
+
+在推理中尤其严重:
+  推理 batch=1, GPU 实际计算 ~2ms
+  launch overhead ~10ms → 5× 的纯浪费!
+```
+
+### CUDA Graph 的工作原理
+
+```
+CUDA Graph 将一整个 GPU 操作序列"录制"成一张图,
+然后整个图只需一次 launch。
+
+录制模式:
+  1. cudaStreamBeginCapture(stream);
+  2. 执行所有 kernel / memcpy 操作 (和正常代码一样!)
+  3. cudaStreamEndCapture(stream, &graph);
+  4. cudaGraphInstantiate(&instance, graph);  // 编译/优化图
+  5. cudaGraphLaunch(instance, stream);       // 单次 launch 执行整个图!
+
+关键点:
+  - 录制时, kernel 实际上不执行! cudaMemcpy 也是假的
+  - CUDA 记录了所有操作及其依赖关系
+  - Instantiate 时, 图被"编译"为优化后的执行计划
+  - Launch 时, 整个图作为一个原子操作提交 → 只有 1 次 driver 开销!
+```
+
+### 代码示例
+
+```cuda
+// 场景: 推理 pipeline (100 层重复结构)
+cudaGraph_t graph;
+cudaGraphExec_t instance;
+
+// Step 1: 开始录制
+cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
+
+// Step 2: 正常写你的 kernel launch (像录制宏一样!)
+for (int layer = 0; layer < 100; layer++) {
+    layernorm_kernel<<<grid, block, 0, stream>>>(...);
+    gemm_kernel<<<grid, block, 0, stream>>>(...);
+    relu_kernel<<<grid, block, 0, stream>>>(...);
+}
+
+// Step 3: 结束录制 → 得到图
+cudaStreamEndCapture(stream, &graph);
+
+// Step 4: 实例化 (编译图)
+cudaGraphInstantiate(&instance, graph, NULL, NULL, 0);
+
+// Step 5: 每次推理只需一行!
+for (int step = 0; step < 100000; step++) {
+    update_inputs();  // 更新输入数据
+    cudaGraphLaunch(instance, stream);  // 替代之前的 300 次 kernel launch!
+}
+cudaStreamSynchronize(stream);
+
+// 清理
+cudaGraphExecDestroy(instance);
+cudaGraphDestroy(graph);
+```
+
+### Graph 的限制和适用场景
+
+```
+适用场景:
+  ✓ 推理: 固定的计算图, 循环执行 → 完美匹配
+  ✓ 训练: 固定的前向+反向+更新 → 可以录制整个 step
+  ✓ 小 kernel: launch overhead 占比高 → 收益最大
+
+不适用/限制:
+  ✗ 动态 shape: 默认图要求固定参数。需要 graph update 或 conditional nodes
+  ✗ 动态控制流: if/else 分支深度变化 → 需要 conditional graph nodes (Hopper+)
+  ✗ Debugging: 图内 kernel 不能用 printf, 不能用 compute-sanitizer 直接调试
+  ✗ 内存地址: 图内的指针必须是固定的。需要用 cudaGraphExecUpdate 更新地址
+
+动态 shape 的解决方案:
+  cudaGraphExecUpdate(instance, graph, &errorLog); // 更新图参数
+  或者在 Hopper 上使用 conditional graph nodes
+```
+
+### 性能收益
+
+```
+典型推理场景 (100 层 BERT, batch=1):
+  无 CUDA Graph: launch overhead ~8ms + 计算 ~5ms = 13ms/step
+  有 CUDA Graph: launch overhead ~0.05ms + 计算 ~5ms = 5.05ms/step
+  → 2.6× 加速!
+
+训练场景 (整个 step):
+  launch overhead ~2ms + 计算 ~100ms = 102ms/step
+  有 CUDA Graph: ~0.05ms + 计算 ~100ms = 100.05ms/step
+  → 1.02× 加速 (收益小于推理, 因为计算占比大)
+
+PyTorch 中启用:
+  model = torch.compile(model, mode="reduce-overhead")
+  # 或:
+  model = torch.compile(model, mode="max-autotune")
+  # torch.compile 内部使用 CUDA Graph 做图级优化
+```
+
+
+## 8.16 Multi-GPU 与 NCCL — 跨 GPU 通信
+
+### 为什么需要多 GPU
+
+```
+单个 GPU 的显存限制:
+  A100 80GB: 最多放下 ~13B 参数的模型 (FP16, 不含优化器)
+  Llama-70B: 需要 ~140GB (FP16) → 至少 2×A100
+  GPT-175B: 需要 ~350GB → 至少 5×A100
+
+多 GPU 不仅解决显存, 更重要的是并行计算:
+  N 个 GPU → ~N× 计算吞吐 (受通信效率影响)
+```
+
+### 并行策略概览
+
+```
+数据并行 (Data Parallelism):
+  每个 GPU 有一份完整模型, 处理不同的 batch 数据
+  前向+反向独立, 只在权重更新时需要同步梯度
+  通信: AllReduce 梯度 (N 个 GPU 各有一份梯度 → 求和 → 每人拿到总和)
+
+张量并行 (Tensor Parallelism):
+  把单个矩阵乘法 (如 4096×12288) 切分到多个 GPU
+  每个 GPU 计算部分列/行, 然后通信合并
+  通信: AllReduce 或 AllGather 激活值/梯度
+  适合: 单个 GPU 放不下一层的情况
+
+流水线并行 (Pipeline Parallelism):
+  不同 GPU 负责不同层 (GPU0: layer 0-11, GPU1: layer 12-23, ...)
+  像工厂流水线, micro-batch 在不同 GPU 间传递
+  通信: 层间激活值的 P2P 传输
+
+序列并行 (Sequence Parallelism):
+  长序列的 N 维度切分到多个 GPU
+  适合: 处理极长序列 (如 32K+ tokens)
+```
+
+### NCCL — NVIDIA Collective Communications Library
+
+```
+NCCL 是 NVIDIA 官方的高性能多 GPU 通信库。
+它实现了常见的集合通信操作, 针对 NVLink / InfiniBand / PCIe 做了极致优化。
+
+核心操作:
+  AllReduce:    每个 GPU 有一个数组 → 所有人拿到总和
+  AllGather:    每人有一块数据 → 所有人拿到拼接后的全部数据
+  ReduceScatter:每人有一块数据 → 每人拿到不同的一块"部分和"
+  Broadcast:    一个 GPU 把数据发给所有其他 GPU
+  Reduce:       所有人送数据到 root GPU → root 拿到总和
+  Send/Recv:    GPU 间点对点传输 (用于流水线并行)
+
+Ring AllReduce (NCCL 的核心算法):
+  假设 4 个 GPU, 每个有 N 个 float 的梯度:
+  
+  Step 1 - ReduceScatter (环形传递, 每步累积):
+    GPU0: [g0, g1, g2, g3] → 累积 g0 部分
+    GPU0 发 g1→GPU1, GPU1 把收到的和自己的 g1 累加
+    ... 环形传递 N-1 步 → 每人拿到自己那份"完整部分和"
+    通信量: (N-1)/N × data → 接近 1×
+
+  Step 2 - AllGather (环形传回, 每步广播):
+    每人把自己那份部分和传给下一个 GPU
+    N-1 步后, 所有人拿到全部结果
+    通信量: (N-1)/N × data
+
+  Ring AllReduce 总通信量: 2 × (N-1)/N × data ≈ 2× data
+  带宽利用率接近 100% (所有链路同时活跃!)
+```
+
+### NCCL 代码示例
+
+```cuda
+#include <nccl.h>
+
+// 初始化
+ncclComm_t comm;
+ncclUniqueId id;
+if (rank == 0) ncclGetUniqueId(&id);
+MPI_Bcast(&id, sizeof(id), MPI_BYTE, 0, MPI_COMM_WORLD);
+ncclCommInitRank(&comm, world_size, id, rank);
+
+// AllReduce 梯度
+float *d_grad;  // GPU 上的梯度
+ncclAllReduce(d_grad, d_grad, N, ncclFloat, ncclSum, comm, stream);
+
+// AllGather 激活值 (张量并行)
+ncclAllGather(d_local_act, d_global_act, local_size, ncclFloat, comm, stream);
+
+// 清理
+ncclCommDestroy(comm);
+```
+
+### 通信与计算重叠
+
+```
+高效的多 GPU 训练必须重叠通信和计算:
+
+传统 (串行):
+  backward() → NCCL AllReduce → optimizer.step()
+
+重叠 (并行):
+  backward():
+    layer_N.grad 算出 → 立即 ncclAllReduce(layer_N.grad) 异步
+    layer_N-1.grad 算出 → 立即 ncclAllReduce(layer_N-1.grad) 异步
+    ...
+  optimizer.step()  # 此时所有梯度已经 AllReduce 完成!
+
+关键:
+  1. NCCL 操作在 GPU 的通信引擎上执行, 不占用 CUDA Core
+  2. 计算 (backward) 和通信 (AllReduce) 天然在流水线中重叠
+  3. 用 CUDA Stream 和 Event 精确控制依赖:
+     计算 stream: backward_layer3, backward_layer2, ...
+     通信 stream: AllReduce_layer3, AllReduce_layer2, ...
+     Event 确保: 计算完成 → 通信才能开始 (数据依赖)
+  
+PyTorch DDP 默认使用这种重叠方式。
+```
+
+### 性能瓶颈和优化
+
+```
+通信占比 = T_通信 / (T_通信 + T_计算)
+
+NVLink (A100): 600 GB/s per GPU
+InfiniBand (HDR): 200 GB/s per GPU
+PCIe 4.0 x16: ~32 GB/s per GPU
+
+优化方向:
+  1. Gradient Bucketing: 不等所有梯度, 攒够一批再 AllReduce
+     → 减少小数据量的通信次数
+  2. FP16/BF16 梯度: AllReduce 的数据量减半
+  3. Tensor Fusion: 把相邻的小 tensor 合并成一个大的再通信
+  4. SHARP (InfiniBand): 在网络交换机内部完成 reduce → 数据量减半
+  5. NVSwitch: 全互联 NVLink → 所有 GPU 同时通信, 不受拓扑限制
+```
+
+
+## 8.17 练习题
 
 配套代码在 [`theory/exercises/`](./exercises/) 目录下: [`ch08_ex1_ilp.cu`](./exercises/ch08_ex1_ilp.cu) / [`ch08_ex2_fusion.cu`](./exercises/ch08_ex2_fusion.cu)
 

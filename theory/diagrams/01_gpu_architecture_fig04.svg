@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="677" height="1085" viewBox="0 0 677 1085">
+<defs>
+  <filter id="shadow" x="-4%" y="-4%" width="108%" height="108%">
+    <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#00000055"/>
+  </filter>
+</defs>
+<rect width="100%" height="100%" rx="10" fill="#1e1e2e"/>
+<defs><marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#a6adc8"/></marker></defs>
+<rect x="28.0" y="133.0" width="117.6" height="336.0" rx="10" fill="#89b4fa18" stroke="#89b4fa" stroke-width="1.5" opacity="1.0" filter="url(#shadow)"/>
+<text x="40.0" y="149.0" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#f38ba8;font-weight:600;opacity:1.0">DRAM Die 7</text>
+<text x="153.6" y="149.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:11.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">← 最顶层</text>
+<line x1="32.0" y1="175.0" x2="141.6" y2="175.0" stroke="#89b4fa" stroke-width="0.5" stroke-dasharray="4 2"/>
+<text x="40.0" y="191.0" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#f38ba8;font-weight:600;opacity:1.0">DRAM Die 6</text>
+<line x1="32.0" y1="217.0" x2="141.6" y2="217.0" stroke="#89b4fa" stroke-width="0.5" stroke-dasharray="4 2"/>
+<text x="40.0" y="233.0" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#f38ba8;font-weight:600;opacity:1.0">DRAM Die 5</text>
+<line x1="32.0" y1="259.0" x2="141.6" y2="259.0" stroke="#89b4fa" stroke-width="0.5" stroke-dasharray="4 2"/>
+<text x="40.0" y="275.0" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#f38ba8;font-weight:600;opacity:1.0">DRAM Die 4</text>
+<line x1="32.0" y1="301.0" x2="141.6" y2="301.0" stroke="#89b4fa" stroke-width="0.5" stroke-dasharray="4 2"/>
+<text x="40.0" y="317.0" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#f38ba8;font-weight:600;opacity:1.0">DRAM Die 3</text>
+<line x1="32.0" y1="343.0" x2="141.6" y2="343.0" stroke="#89b4fa" stroke-width="0.5" stroke-dasharray="4 2"/>
+<text x="40.0" y="359.0" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#f38ba8;font-weight:600;opacity:1.0">DRAM Die 2</text>
+<line x1="32.0" y1="385.0" x2="141.6" y2="385.0" stroke="#89b4fa" stroke-width="0.5" stroke-dasharray="4 2"/>
+<text x="40.0" y="401.0" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#f38ba8;font-weight:600;opacity:1.0">DRAM Die 1</text>
+<line x1="32.0" y1="427.0" x2="141.6" y2="427.0" stroke="#89b4fa" stroke-width="0.5" stroke-dasharray="4 2"/>
+<text x="40.0" y="443.0" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#89b4fa;font-weight:600;opacity:1.0">Logic Die</text>
+<rect x="53.2" y="553.0" width="58.8" height="63.0" rx="10" fill="#89b4fa18" stroke="#89b4fa" stroke-width="1.5" opacity="1.0" filter="url(#shadow)"/>
+<text x="65.2" y="569.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">HBM</text>
+<text x="65.2" y="587.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">Stack0</text>
+<rect x="137.2" y="553.0" width="58.8" height="63.0" rx="10" fill="#89b4fa18" stroke="#89b4fa" stroke-width="1.5" opacity="1.0" filter="url(#shadow)"/>
+<text x="149.2" y="569.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">HBM</text>
+<text x="149.2" y="587.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">Stack1</text>
+<rect x="221.2" y="553.0" width="100.8" height="105.0" rx="10" fill="#89b4fa18" stroke="#89b4fa" stroke-width="1.5" opacity="1.0" filter="url(#shadow)"/>
+<text x="233.2" y="569.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">GPU Die</text>
+<text x="233.2" y="587.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">(826mm²)</text>
+<rect x="53.2" y="637.0" width="58.8" height="63.0" rx="10" fill="#89b4fa18" stroke="#89b4fa" stroke-width="1.5" opacity="1.0" filter="url(#shadow)"/>
+<text x="65.2" y="653.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">HBM</text>
+<text x="65.2" y="671.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">Stack2</text>
+<rect x="137.2" y="637.0" width="58.8" height="63.0" rx="10" fill="#89b4fa18" stroke="#89b4fa" stroke-width="1.5" opacity="1.0" filter="url(#shadow)"/>
+<text x="149.2" y="653.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">HBM</text>
+<text x="149.2" y="671.0" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#cdd6f4;font-weight:normal;opacity:1.0">Stack3</text>
+<text x="32.0" y="40.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">HBM (High Bandwidth Memory) 不是传统的 DRAM 芯片。</text>
+<text x="32.0" y="61.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">它是多层 DRAM die 垂直堆叠, 通过硅通孔 (TSV, Through-Silicon Via) 互联,</text>
+<text x="32.0" y="82.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">然后通过硅中介层 (Silicon Interposer) 连接到 GPU die。</text>
+<text x="32.0" y="124.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">物理结构:</text>
+<text x="32.0" y="502.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">(μ-bump 微凸块连接)</text>
+<text x="32.0" y="544.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">Silicon Interposer             ← 硅中介层: 超细线连接 HBM 和 GPU</text>
+<text x="32.0" y="733.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">HBM</text>
+<text x="32.0" y="754.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">Stack4</text>
+<text x="32.0" y="817.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">(C4 bump 连接)</text>
+<text x="32.0" y="859.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">Package      ← 封装基板</text>
+<text x="32.0" y="880.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">Substrate</text>
+<text x="32.0" y="943.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">A100 HBM2e 配置:</text>
+<text x="32.0" y="964.6" text-anchor="start" style="font-family:'Cascadia Code','Fira Code','JetBrains Mono','Menlo','Consolas','Noto Sans Mono CJK SC',monospace;font-size:12.5px;fill:#a6adc8;font-weight:normal;opacity:1.0">5 个 HBM2e stack (80GB 版本)</text>
+<text x="32.0" y="985.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">每 stack: 8-Hi (8 层 DRAM die)</text>
+<text x="32.0" y="1006.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">每 stack: 16GB (80GB / 5)</text>
+<text x="32.0" y="1027.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">每 stack 带宽: ~410 GB/s</text>
+<text x="32.0" y="1048.6" text-anchor="start" style="font-family:'Inter','Noto Sans SC','Helvetica Neue',sans-serif;font-size:13px;fill:#cdd6f4;font-weight:600;opacity:1.0">总带宽: 5 × 410 = 2039 GB/s (理论峰值, 含 ECC 开销后 ~1935 GB/s)</text>
+</svg>

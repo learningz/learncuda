@@ -50,6 +50,8 @@ CUDA backend 展开:
 每个步骤都是一个 "算子" (Operator / Op)
 每个算子最终调用一个或多个 CUDA kernel
 ```
+<p align="center"><img src="diagrams/05_operator_development_fig01.svg" alt="05_operator_development figure 1" /></p>
+
 
 ### 算子分类 — 按并行模式
 
@@ -99,6 +101,8 @@ CUDA backend 展开:
 │    优化方向: Tiling + Halo 预加载, Texture Cache                    │
 └───────────────────────────────────────────────────────────────────┘
 ```
+<p align="center"><img src="diagrams/05_operator_development_fig02.svg" alt="05_operator_development figure 2" /></p>
+
 
 ### 每类算子的理论性能上限
 
@@ -125,6 +129,8 @@ Embedding         ~0                      延迟 limited (随机访问)
   理论最短时间 = total_flops / peak_flops
   peak_flops = 19.5 TFLOPS (FP32) 或 312 TFLOPS (FP16 TC)
 ```
+<p align="center"><img src="diagrams/05_operator_development_fig03.svg" alt="05_operator_development figure 3" /></p>
+
 
 
 ## 5.2 算子开发完整流程 — 以 GELU 为例
@@ -683,6 +689,8 @@ my_op/
 │       ├── my_op_cuda.cu # CUDA kernel
 │       └── my_op.h       # 头文件 (kernel 声明)
 ```
+<p align="center"><img src="diagrams/05_operator_development_fig04.svg" alt="05_operator_development figure 4" /></p>
+
 
 ### 完整的 C++ Dispatch 层
 
@@ -831,6 +839,8 @@ K-Tile 循环内的操作:
     CTA 计算: 128×128×8×2 = 262144 FLOP
     AI (Global 级) = 262144 / 8192 = 32 FLOP/Byte → 远超 Ridge Point!
 ```
+<p align="center"><img src="diagrams/05_operator_development_fig05.svg" alt="05_operator_development figure 5" /></p>
+
 
 ### Embedding 算子优化
 
@@ -874,7 +884,109 @@ Embedding: output[i] = weight_table[indices[i]]
 ```
 
 
-## 5.10 本章总结
+## 5.10 手写 CUDA Kernel vs 调库 — 决策指南
+
+这是实际工作中最频繁的工程判断。错误决策 → 浪费数周。
+
+### 决策流程
+
+```
+Q1: 有现成的库实现吗?
+  ├── GEMM → cuBLAS (不要手写!)
+  ├── Conv → cuDNN
+  ├── FFT → cuFFT
+  └── 无 → 继续 Q2
+
+Q2: Memory Bound 还是 Compute Bound?
+  ├── Memory Bound (elementwise, reduce, norm):
+  │     调库不如手写! 库无法跨算子融合
+  │     → 手写融合 kernel (3-5x 带宽节省)
+  └── Compute Bound (大 GEMM, Conv):
+        调库! cuBLAS/cuDNN 的汇编级优化无法超越
+
+Q3: 需要特殊数值处理?
+  ├── custom epilogue (GEMM + Bias + custom Act)
+  │   → cuBLASLt / CUTLASS epilogue fusion
+  └── 深层跨算子融合 → 手写
+```
+
+### 具体场景
+
+```
+"我想加速 LayerNorm + Dropout + Residual"
+  → 手写融合! Memory Bound ×3 → 1 个 kernel: 9 次 HBM → 4 次
+
+"我想写更快的 GEMM"
+  → 别手写! cuBLAS 汇编级优化你比不了
+  → 替代: 学 CUTLASS (模板库, 可组合 GEMM 片段)
+
+"推理 batch=1 很慢"
+  → launch overhead 瓶颈 → CUDA Graph + 融合小 kernel
+  → 小矩阵: 手写融合 → 减少 kernel 数量
+
+"cuDNN 没有的激活函数"
+  → 手写 elementwise (简单) + 和前后算子融合 (关键)
+```
+
+### 手写前自问
+
+```
+1. cuBLAS/cuDNN/cuFFT 有吗? → 用库
+2. torch.compile 能自动融合吗? → 让编译器做
+3. 只需写 epilogue 吗? → CUTLASS/cuBLASLt
+4. 确认需手写后: ncu profile → 一次只改一个变量
+```
+
+### cuBLAS 调用示例 — 让"用库"不再是空话
+
+教程中多次说"用 cuBLAS 别手写 GEMM"，这里给出实际调用的代码，确保你真正知道怎么用。
+
+**基本 cuBLAS SGEMM 调用：**
+
+```cuda
+#include <cublas_v2.h>
+
+// 初始化 cuBLAS (cublasCreate 在程序开头调用一次)
+cublasHandle_t handle;
+cublasCreate(&handle);
+
+// C = alpha * A × B + beta * C
+// cuBLAS 使用列主序 (Fortran order), 所以 C[i][j] 实际存储为 C[j*ldc + i]
+float alpha = 1.0f, beta = 0.0f;
+cublasSgemm(handle,
+    CUBLAS_OP_N, CUBLAS_OP_N,   // A 不转置, B 不转置
+    N, M, K,                    // 矩阵维度: C = A[M×K] × B[K×N]
+    &alpha,
+    d_B, N,                     // B 是 N×K (列主序下: 第一维 = N = leading dim)
+    d_A, K,                     // A 是 K×M (列主序下: 第一维 = K = leading dim)
+    &beta,
+    d_C, N);                    // C 是 N×M (列主序下: 第一维 = N = leading dim)
+```
+
+> **常见坑**：cuBLAS 的矩阵是列主序。如果你的数据是 C 风格 row-major（如 `A[i][j] = A[i*K+j]`），传给 cuBLAS 时行列要对调：row-major 的 `A[M×K]` = column-major 的 `A^T [K×M]`。所以 `cublasSgemm` 的参数会交换 M/N/K。
+
+**对比：手写 kernel vs cuBLAS：**
+
+```cuda
+// 手写 tiled GEMM (教学用, ~5000 GB/s on A100)
+gemm_tiled<<<grid, block>>>(d_A, d_B, d_C, M, K, N);
+
+// cuBLAS (生产用, ~18000 GB/s on A100 ≈ 3.6x faster)
+cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, M, K,
+            &alpha, d_B, N, d_A, K, &beta, d_C, N);
+```
+
+**为什么 cuBLAS 快这么多？** 它不是"更好的 tiling"，而是：
+1. 使用 Tensor Core 做 FP16/BF16（你手写的 FP32 tiled 用不了 TC）
+2. 汇编级寄存器分配（编译器做不到的手工寄存器复用）
+3. 针对每个 GPU 架构的专门微调（`-gencode arch=compute_80,code=sm_80`）
+
+> **进阶**：如果你需要"GEMM + bias + ReLU"这种组合，不要手写整个 kernel。用 cuBLASLt 的 epilogue fusion：`cublasLtMatmul` + `CUBLASLT_EPILOGUE_RELU_BIAS`，在库层面完成融合，比手写更快且正确性有保障。
+
+
+
+
+## 5.11 本章总结
 
 ```
 算子开发流程: 数学定义 → 计算分析 (AI) → 朴素实现 → 优化 → Profiling
@@ -894,7 +1006,7 @@ PyTorch 接入: cpp_extension (CUDA) / Triton (Python) / CUTLASS (C++ template)
 ```
 
 
-## 5.11 Q&A
+## 5.12 Q&A
 
 ### Q: 如何判断我的算子是 Memory Bound 还是 Compute Bound?
 
@@ -946,7 +1058,7 @@ Reduce 的挑战:
 ```
 
 
-## 5.12 练习题
+## 5.13 练习题
 
 配套代码在 [`theory/exercises/`](./exercises/) 目录下: [`ch05_ex1_gelu_roofline.cu`](./exercises/ch05_ex1_gelu_roofline.cu) / [`ch05_ex2_fused_gelu_dropout.cu`](./exercises/ch05_ex2_fused_gelu_dropout.cu) / [`ch05_ex3_bottleneck.cu`](./exercises/ch05_ex3_bottleneck.cu)
 

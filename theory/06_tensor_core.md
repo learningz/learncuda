@@ -169,6 +169,80 @@ __global__ void tensor_core_gemm(const half *A, const half *B, float *C,
 
 ### Fragment 的内部结构
 
+### Warp 索引公式的推导
+
+上面代码中最关键也最容易被跳过的是这两个 Warp 索引：
+
+```cuda
+int warpM = (blockIdx.y * blockDim.y + threadIdx.y) / 32 * 16;
+int warpN = (blockIdx.x * blockDim.x + threadIdx.x) / 32 * 16;
+```
+
+对于没有接触过数据级并行的人来说，这一行很难在看第一眼时理解清楚。这里一步步推。
+
+**背景：** 一个 Warp (32 线程) 协作完成一个 16×16 矩阵乘 tile。如果 Block 中有多个 Warp（比如 blockDim=(32,2)，总共 64 线程 = 2 Warps），每个 Warp 需要知道自己处理 C 矩阵的哪一块。
+
+**步骤 1：找到线程在 Block 中的 Warp 编号**
+
+```
+Block 的线程排列: dim3 blockDim(32, 2)  → 32×2 = 64 线程
+
+  threadIdx.y=0: thread 0-31   → Warp 0
+  threadIdx.y=1: thread 32-63  → Warp 1
+
+线性 ID = threadIdx.y * blockDim.x + threadIdx.x
+        = threadIdx.y * 32 + threadIdx.x
+
+因为 threadIdx.x 范围 0-31:
+  warp_in_block = (threadIdx.y * 32 + threadIdx.x) / 32
+                = threadIdx.y  (整数除法, threadIdx.x < 32 被舍掉)
+```
+
+所以在这个配置下，`threadIdx.y` 就是 Warp 编号。这就是最直接的一种索引方式。
+
+**步骤 2：计算全局 Warp 在 M 方向的编号**
+
+```
+global_warp_m = blockIdx.y * blockDim.y + threadIdx.y
+              = blockIdx.y * (Warp 数/Block) + Warp 编号
+
+每个 Warp 负责 16 行 → 全局起始行 = global_warp_m * 16
+```
+
+**步骤 3：把两部分拼起来**
+
+将步骤 1 的 `warp_in_block = threadIdx.y` 代入步骤 2:
+
+```
+global_warp_m = blockIdx.y * blockDim.y + threadIdx.y
+```
+
+除以 32（可选的分组参数，在 blockDim.y < 32 时不影响结果）:
+
+```
+warpM = (blockIdx.y * blockDim.y + threadIdx.y) / 32 * 16
+```
+
+其中 `* 16`：每个 Warp 处理 16 行 → 把 Warp 编号转换为 C 矩阵的实际行号。
+
+同理 `warpN`：把 Warp 在 N 方向的编号转为实际列号。
+
+**典型 blockDim 配置：**
+
+```
+最简单配置 (1 Warp/Block):
+  dim3 block(32, 1);  → 32 线程 = 1 Warp = 1 个 16×16 tile
+
+多 Warp 配置 (2 Warp/Block):
+  dim3 block(32, 2);  → 64 线程 = 2 Warp → 沿 M 方向处理 2 个 tile
+                        Block 负责 32×16 的 C 子块
+```
+
+> **关键理解点**：这些公式看起来复杂，但核心只做了一件事——**把 (blockIdx, threadIdx) 映射到 "我这个 Warp 处理 C 的哪一块"**。公式之所以有 `/32*16` 这种奇怪的组合，是因为 Grid/Block/Warp 之间的坐标转换需要在不同粒度之间切换（thread → warp → tile）。
+
+
+### Fragment 的内部结构
+
 ```
 Fragment 是 WMMA 的核心概念:
 一个 16×16 矩阵被分散存储在一个 Warp 的 32 个线程中。
@@ -207,7 +281,43 @@ MMA PTX 指令更灵活:
 - CUTLASS 和 cuBLAS 内部使用 MMA PTX
 ```
 
-```cuda
+### WMMA 和 MMA PTX 的关系
+
+理解两者关系是过渡的关键。它们不是两套独立的机制——WMMA 是对 MMA PTX 的高层封装。
+
+```
+调用层级:
+  你的代码 ──→ WMMA API (wmma::mma_sync)
+            ──→ 编译器 ──→ MMA PTX (mma.sync.aligned...)
+                          ──→ PTX 汇编器 ──→ SASS (HMMA.16816.F32)
+
+所以:
+  wmma::fill_fragment(c, 0.0f);          → 多条 MOV 指令初始化
+  wmma::load_matrix_sync(a, ptr, ldm);   → LDG + SMEM 重排 + LDS
+  wmma::mma_sync(c, a, b, c);            → mma.sync.aligned... (PTX)
+                                        → HMMA.16816.F32 (SASS)
+  wmma::store_matrix_sync(ptr, c, ldm);  → STS + SMEM 重排 + STG
+```
+
+**形状命名的对应关系：**
+
+```
+WMMA fragment:                     MMA PTX 指令:
+  16 × 16 × 16                      m16n8k16
+  │    │    │                        │  │  │
+  M    N    K                        M  N  K
+  (每个Warp算16行×16列×K=16)         (每次MMA算16行×8列×K=16)
+
+注意: WMMA 的 N=16 但 MMA PTX 的 N=8!
+因为一个 WMMA mma_sync 调用会被编译器展开为 2 条 MMA PTX 指令:
+  第 1 条: mma.sync.aligned.m16n8k16 → 算 C 的前 8 列
+  第 2 条: mma.sync.aligned.m16n8k16 → 算 C 的后 8 列
+  → 16 列 = 8×2 ✓
+```
+
+有了这个对应关系，再看 MMA PTX 的汇编代码就不会觉得它是凭空出现的了。
+
+
 // Ampere m16n8k16 FP16 MMA (通过内联 PTX)
 __device__ void mma_m16n8k16(
     uint32_t *D,        // 4 个 uint32_t = 8 个 FP16 输出
@@ -527,6 +637,8 @@ CUTLASS 3.x 的 Ampere GEMM 使用 3 阶段 (或更多) 的软件流水线:
   
   三条流水线完全重叠 → 接近硬件峰值!
 ```
+<p align="center"><img src="diagrams/06_tensor_core_fig01.svg" alt="06_tensor_core figure 1" /></p>
+
 
 ### Hopper 的 Warp Specialization (TMA + WGMMA)
 
@@ -634,6 +746,8 @@ CUTLASS 3.x (Hopper) 的新抽象:
   TiledMMA: 描述 MMA 在 Warp/线程级别的切分
   TiledCopy: 描述数据搬运的切分
 ```
+<p align="center"><img src="diagrams/06_tensor_core_fig02.svg" alt="06_tensor_core figure 2" /></p>
+
 
 
 ## 6.11 Hopper TMA — 硬件自动搬运多维张量
@@ -775,11 +889,111 @@ FlashAttention-3 的 Cluster 用法:
 ```
 
 
-## 6.13 本章总结
+## 6.13 FP8 训练实战 — Hopper 的杀手锏
+
+### FP8 为什么是游戏改变者
+
+```
+FP8 的优势 (相比 FP16/BF16):
+  内存: 1 byte/element vs 2 bytes → 权重/激活/梯度存储减半
+  带宽: 同样的 Memory Bound kernel, 吞吐翻倍
+  计算: H100 FP8 Tensor Core 峰值 1979 TFLOPS vs FP16 989 TFLOPS → 2×
+
+代价:
+  精度极低 (E4M3: 只有 3-bit mantissa = ~1 位有效数字)
+  → 不能简单地用 FP8 替代 FP16! 需要特殊的训练策略。
+
+FP8 训练的挑战:
+  1. 激活值: 范围 [-240, 240], 超范围 → 饱和截断
+  2. 梯度: 很多梯度 < FP8 最小正数 → 变成 0
+  3. 权重: 小更新量无法表示 → 训练不收敛
+```
+
+### 解决方案: Delayed Scaling (延迟缩放)
+
+```
+核心思想: 不在每次迭代都重新计算 scale, 而是用历史统计来估计。
+
+算法:
+  Step 1: 对每个 tensor (激活、权重、梯度), 维护一个 scale 值
+  Step 2: 用 scale 把 FP32 值缩放到 FP8 可表示范围
+          FP8_value = FP32_value × scale
+  Step 3: 在 FP8 Tensor Core 中计算
+  Step 4: 反缩放或用 FP32 做后续运算
+  Step 5: 定期更新 scale (不是每步都更新! 从历史中取 max)
+
+scale 的更新策略:
+  E4M3 (前向, 精度重要):
+    amax_history = max(|x|) 的历史最大值
+    scale = max_value(E4M3) / max(amax_history, eps)
+    → 确保最大绝对值映射到 FP8 的最大值
+  
+  E5M2 (反向, 范围重要):
+    scale = max_value(E5M2) / max(amax_history, eps)
+    → 确保更大的范围, 允许更多溢出
+
+为什么不用 per-tensor 之外更细粒度的 scale:
+  per-tile/per-channel scale 更精确, 但硬件不支持。
+  Hopper 只有 per-tensor scale。
+```
+
+### PyTorch 中的 FP8 训练
+
+```python
+# 需要 Transformer Engine 或 torch.compile + fp8
+# NVIDIA Transformer Engine 是最简单的入门方式:
+
+import transformer_engine.pytorch as te
+from transformer_engine.common.recipe import Format, DelayedScaling
+
+# 配置 FP8 格式
+fp8_format = Format.HYBRID  # E4M3 前向 + E5M2 反向
+recipe = DelayedScaling(
+    fp8_format=fp8_format,
+    amax_history_len=1024,   # 用最近 1024 步的 max 估计 scale
+    amax_compute_algo="max",
+)
+
+# 替换 Linear 层为 FP8 版本
+model = te.Linear(768, 3072)  # 自动使用 FP8 Tensor Core!
+
+# 训练循环
+with te.fp8_autocast(enabled=True, fp8_recipe=recipe):
+    output = model(input)  # 内部用 FP8 GEMM
+    loss = output.sum()
+loss.backward()  # 梯度也在 FP8 中计算!
+```
+
+### FP8 精度影响
+
+```
+经验结果 (来自 H100 白皮书和开源项目):
+
+LLM 训练 (GPT-3 规模):
+  使用 FP8 训练 vs BF16 训练:
+    收敛曲线: 几乎重合
+    最终 loss: 差异 < 0.1%
+    吞吐提升: ~1.5-2× (取决于模型大小和通信占比)
+
+CV 训练 (ViT, ResNet):
+  需要更仔细地调整 scale 更新频率
+  某些模型可能需要 BF16 master weights
+
+推荐策略:
+  前向: FP8 E4M3 (更高精度)
+  反向梯度: FP8 E5M2 (更大范围)
+  权重更新: FP32 (必须!)
+  Master weights: FP32 (必须!)
+  Attention: 可以尝试 FP8 K/V cache, QKV 投影用 FP8
+```
+
+
+## 6.14 本章总结
 
 ```
 Tensor Core 是现代 GPU 性能的核心来源:
   FP16 TC 性能 = FP32 CUDA Core 的 ~16× (A100: 312 vs 19.5 TFLOPS)
+  FP8  TC 性能 = FP16 TC 的 2× (H100: 1979 vs 989 TFLOPS)
 
 关键知识链:
   数据格式 (FP16/BF16/TF32/FP8/INT8) → 决定精度和吞吐
@@ -790,12 +1004,13 @@ Tensor Core 是现代 GPU 性能的核心来源:
 
 Hopper 的跳跃:
   TMA: 硬件自动多维地址计算 + 数据搬运
-  WGMMA: 4 个 Warp 協作, 直接从 SMEM 读 B 矩阵
+  WGMMA: 4 个 Warp 协作, 直接从 SMEM 读 B 矩阵
   Warp Specialization: Producer/Consumer 解耦
+  FP8: 内存/计算再次翻倍, 但需要 Delayed Scaling 保持精度
 ```
 
 
-## 6.12 Q&A
+## 6.15 Q&A
 
 ### Q: 我用了 FP16 为什么没有自动用 Tensor Core?
 
@@ -854,7 +1069,7 @@ CUTLASS (库/框架):
 ```
 
 
-## 6.13 练习题
+## 6.16 练习题
 
 配套代码在 [`theory/exercises/`](./exercises/) 目录下: [`ch06_ex1_wmma.cu`](./exercises/ch06_ex1_wmma.cu) / [`ch06_ex2_tf32.cu`](./exercises/ch06_ex2_tf32.cu)
 
